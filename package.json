@@ -1,0 +1,14 @@
+{
+  "name": "olympos",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test"
+  },
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=18"
+  }
+}
