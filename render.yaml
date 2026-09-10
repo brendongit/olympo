@@ -15,7 +15,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    buildCommand: pnpm install --frozen-lockfile
     startCommand: pnpm --filter @olympos/servidor start
     healthCheckPath: /health
     envVars:
@@ -29,7 +29,7 @@ services:
 #     runtime: static
 #     plan: free
 #     region: oregon
-#     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @olympos/web build
+#     buildCommand: pnpm install --frozen-lockfile && pnpm --filter @olympos/web build
 #     staticPublishPath: packages/web/dist
 #     envVars:
 #       - key: VITE_SERVIDOR_URL
