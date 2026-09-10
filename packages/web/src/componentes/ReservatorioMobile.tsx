@@ -163,12 +163,18 @@ export function ReservatorioMobile({ estado }: { estado: EstadoJogo }) {
           const info = INFO_FICHA[f];
           const quantidade = estado.reservatorio[f];
 
-          if (f === 'icor') {
+          // Ícor e Chronos são "fora do mercado" (Seção 3.1): blocos travados,
+          // nunca respondem a toque (Seção 19.7).
+          if (f === 'icor' || f === 'chronos') {
             return (
               <div
                 key={f}
                 className={`flex min-h-[48px] min-w-[48px] flex-col items-center justify-center rounded-lg border px-2 py-2 ${info.corBorda} ${info.corFundo} ${info.corTexto} opacity-80`}
-                title="Ícor não pode ser colhido diretamente — só via Reservar"
+                title={
+                  f === 'icor'
+                    ? 'Ícor não pode ser colhido diretamente — só via Reservar'
+                    : 'Chronos não pode ser colhido — só ao reivindicar a 1ª Lenda de nível 3'
+                }
               >
                 <span className="text-lg">{info.icone}</span>
                 <span className="text-sm font-bold">{quantidade}</span>

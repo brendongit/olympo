@@ -76,6 +76,7 @@ export function FileirasLendas({ estado }: { estado: EstadoJogo }) {
                   key={cartaId}
                   lenda={lenda}
                   pagamento={pagamento}
+                  jogadorTemChronos={jogadorDaVez.temChronos}
                   acoes={[
                     {
                       rotulo: 'Reivindicar',

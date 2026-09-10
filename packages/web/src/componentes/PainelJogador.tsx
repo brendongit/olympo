@@ -3,7 +3,7 @@
 
 import type { EstadoJogo } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podePassar, podeReivindicar } from '@olympos/motor';
-import { INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
+import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
 import { CartaLenda } from './CartaLenda.js';
 
@@ -20,6 +20,23 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
           <span className="text-2xl">{jogador.avatar}</span>
           <span className="font-serif text-xl font-bold text-amber-200">{jogador.nome}</span>
           <span className="text-sm text-stone-400">· Turno {estado.numeroDoTurno + 1}</span>
+          <span className="text-xs text-stone-400" title={`${jogador.simbolosArgo} símbolo(s) do Argo`}>
+            ⛵{jogador.simbolosArgo}
+          </span>
+          <span
+            className={`text-xs ${jogador.temChronos ? 'text-stone-200' : 'text-stone-600'}`}
+            title={jogador.temChronos ? 'Tem a Essência de Chronos' : 'Sem a Essência de Chronos'}
+          >
+            ⧗{jogador.temChronos ? '✓' : '✗'}
+          </span>
+          {estado.argonautas.dono === jogador.id && (
+            <span className="text-xs text-amber-400" title="Você está com Os Argonautas">
+              👑
+            </span>
+          )}
+          {jogador.santuarios.length > 0 && (
+            <span className="text-xs text-amber-400">⛩ ×{jogador.santuarios.length}</span>
+          )}
           <span className="ml-auto text-lg font-bold text-amber-300">{jogador.kleos}★</span>
         </div>
 
@@ -47,17 +64,16 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs uppercase tracking-wide text-stone-500">Domínios</span>
-          {ORDEM_FICHAS.filter((f) => f !== 'icor').map((f) => {
-            const info = INFO_FICHA[f];
-            const qtd = jogador.dominios[f as keyof typeof jogador.dominios];
+          {ORDEM_ESSENCIAS.map((e) => {
+            const info = INFO_FICHA[e];
             return (
               <span
-                key={f}
+                key={e}
                 className="flex items-center gap-0.5 rounded bg-stone-800 px-1.5 py-0.5 text-xs text-stone-300"
                 title={`Domínio ${info.rotulo}`}
               >
                 {info.icone}
-                {qtd}
+                {jogador.dominios[e]}
               </span>
             );
           })}
@@ -79,6 +95,7 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
                 lenda={lenda}
                 pagamento={pagamento}
                 reservaOculta={p.oculto}
+                jogadorTemChronos={jogador.temChronos}
                 acoes={[
                   {
                     rotulo: 'Reivindicar',

@@ -20,9 +20,11 @@ interface CartaLendaProps {
   pagamento?: { possivel: boolean; pagamento: Bolsa } | undefined;
   acoes: AcaoCarta[];
   reservaOculta?: boolean; // presságio próprio ainda oculto para os outros — só um lembrete visual
+  /** Necessário só para cartas de nível 3, para decidir se a Marca de Chronos pulsa (Seção 19.6). */
+  jogadorTemChronos?: boolean;
 }
 
-export function CartaLenda({ lenda, pagamento, acoes, reservaOculta }: CartaLendaProps) {
+export function CartaLenda({ lenda, pagamento, acoes, reservaOculta, jogadorTemChronos }: CartaLendaProps) {
   const precisaIcor = !!pagamento?.possivel && pagamento.pagamento.icor > 0;
   const reivindicavelDireto = !!pagamento?.possivel && pagamento.pagamento.icor === 0;
 
@@ -33,14 +35,22 @@ export function CartaLenda({ lenda, pagamento, acoes, reservaOculta }: CartaLend
       : `${COR_NIVEL[lenda.nivel]}`;
 
   const custosVisiveis = ORDEM_ESSENCIAS.filter((e) => lenda.custo[e] > 0);
+  const concedeChronos = lenda.chronos && !jogadorTemChronos;
 
   return (
     <div
       className={`flex w-36 flex-col rounded-lg border-2 bg-stone-900 p-2 text-stone-100 ${borda}`}
-      aria-label={`${lenda.nome}, nível ${lenda.nivel}, domínio ${INFO_FICHA[lenda.dominio].rotulo}, ${lenda.kleos} Kléos`}
+      aria-label={`${lenda.nome}, nível ${lenda.nivel}, domínio ${INFO_FICHA[lenda.dominio].rotulo}, ${lenda.kleos} Kléos${
+        lenda.argo > 0 ? `, ${lenda.argo} símbolo${lenda.argo > 1 ? 's' : ''} do Argo` : ''
+      }${concedeChronos ? ', concede a Essência de Chronos' : ''}`}
     >
       <div className="mb-1 flex items-center justify-between text-sm font-bold">
         <span title="Kléos">{lenda.kleos > 0 ? `${lenda.kleos}★` : '—'}</span>
+        {lenda.argo > 0 && (
+          <span className="text-xs text-stone-300" title={`${lenda.argo} símbolo(s) do Argo`}>
+            {'⛵'.repeat(lenda.argo)}
+          </span>
+        )}
         <span
           className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${INFO_FICHA[lenda.dominio].corFundo} ${INFO_FICHA[lenda.dominio].corTexto}`}
           title={`Domínio: ${INFO_FICHA[lenda.dominio].rotulo}`}
@@ -48,6 +58,17 @@ export function CartaLenda({ lenda, pagamento, acoes, reservaOculta }: CartaLend
           {INFO_FICHA[lenda.dominio].icone}
         </span>
       </div>
+
+      {lenda.chronos && (
+        <div className="mb-1 flex justify-end">
+          <span
+            className={`text-xs ${concedeChronos ? 'text-amber-300 animate-pulse' : 'text-stone-700'}`}
+            title={concedeChronos ? 'Concede a Essência de Chronos' : 'Marca de Chronos — você já tem a Essência'}
+          >
+            ⧗
+          </span>
+        </div>
+      )}
 
       <div className="mb-1 truncate text-center text-sm font-serif font-semibold" title={lenda.nome}>
         {reservaOculta ? '🂠 (só você vê)' : lenda.nome}

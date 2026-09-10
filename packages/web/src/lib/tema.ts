@@ -54,11 +54,21 @@ export const INFO_FICHA: Record<Ficha, InfoEssencia> = {
     corFundo: 'bg-yellow-400',
     corBorda: 'border-yellow-200',
   },
+  chronos: {
+    rotulo: 'Chronos',
+    icone: '⧗',
+    corTexto: 'text-stone-100',
+    corFundo: 'bg-stone-700',
+    corBorda: 'border-stone-400',
+  },
 };
 
 // Seção 2: ordem canônica das essências, usar sempre em toda UI.
 export const ORDEM_ESSENCIAS: Essencia[] = ['eter', 'oceano', 'terra', 'chama', 'sombra'];
-export const ORDEM_FICHAS: Ficha[] = [...ORDEM_ESSENCIAS, 'icor'];
+// Ícor e Chronos são "fora do mercado" (Seção 3.1): nunca clicáveis para
+// colheita, sempre exibidos por último e visualmente separados.
+export const ORDEM_FICHAS: Ficha[] = [...ORDEM_ESSENCIAS, 'icor', 'chronos'];
+export const FICHAS_FORA_DO_MERCADO_UI: Ficha[] = ['icor', 'chronos'];
 
 export const NOME_NIVEL: Record<1 | 2 | 3, string> = {
   1: 'Relíquias e Presságios',

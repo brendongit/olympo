@@ -1,14 +1,17 @@
-// Layout mobile (Seção 17.4, <640px): barra fixa no topo, faixa de
-// oponentes, acordeão de Deuses, fileiras com scroll horizontal, reservatório
-// com alvos de toque grandes e o painel do jogador como bottom-sheet.
+// Layout mobile (Seção 19.4, <640px): barra fixa no topo com o Keraunos
+// compacto, faixa de oponentes, indicador d'Os Argonautas, acordeão de
+// Santuários, fileiras com scroll horizontal, reservatório com alvos de
+// toque grandes e o painel do jogador como bottom-sheet.
 
 import type { EstadoJogo } from '@olympos/motor';
 import { useEstadoVisivel } from '../loja/usePartida.js';
-import { AcordeaoDeuses } from './AcordeaoDeuses.js';
+import { BarraKeraunosCompacta } from './PainelKeraunos.js';
+import { AcordeaoSantuarios } from './AcordeaoSantuarios.js';
 import { FaixaOponentesMobile } from './FaixaOponentesMobile.js';
 import { FileirasLendasMobile } from './FileirasLendasMobile.js';
+import { IndicadorArgonautas } from './IndicadorArgonautas.js';
 import { ModalDescarte } from './ModalDescarte.js';
-import { ModalEscolherDeus } from './ModalEscolherDeus.js';
+import { ModalEscolherSantuario } from './ModalEscolherSantuario.js';
 import { PainelJogadorSheet } from './PainelJogadorSheet.js';
 import { ReservatorioMobile } from './ReservatorioMobile.js';
 import { TelaFimDeJogo } from './TelaFimDeJogo.js';
@@ -40,18 +43,21 @@ export function TelaJogoMobile({ estado }: { estado: EstadoJogo }) {
         </button>
       </header>
 
+      <BarraKeraunosCompacta estado={estado} />
+
       {estado.fase === 'ULTIMA_RODADA' && (
         <div
           className="shrink-0 bg-red-800 px-3 py-1 text-center text-xs font-semibold text-red-100"
           aria-live="assertive"
         >
-          Última rodada — {estado.jogadores.find((j) => j.id === estado.disparouUltimaRodada)?.nome} atingiu 15
-          Kléos
+          Última rodada — {estado.jogadores.find((j) => j.id === estado.disparouUltimaRodada)?.nome} forjou o
+          Keraunos
         </div>
       )}
 
       <FaixaOponentesMobile estadoVisivel={estadoVisivel} />
-      <AcordeaoDeuses estado={estado} />
+      <IndicadorArgonautas estado={estado} />
+      <AcordeaoSantuarios estado={estado} />
 
       <main className="flex flex-1 flex-col overflow-hidden px-2 pb-2">
         <FileirasLendasMobile estado={estado} />
@@ -63,7 +69,7 @@ export function TelaJogoMobile({ estado }: { estado: EstadoJogo }) {
       <PainelJogadorSheet estado={estado} />
 
       {estado.subFase === 'DESCARTANDO' && <ModalDescarte estado={estado} />}
-      {estado.subFase === 'ESCOLHENDO_DEUS' && <ModalEscolherDeus estado={estado} />}
+      {estado.subFase === 'ESCOLHENDO_SANTUARIO' && <ModalEscolherSantuario estado={estado} />}
     </div>
   );
 }

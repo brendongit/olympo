@@ -27,6 +27,20 @@ export function FaixaOponentesMobile({ estadoVisivel }: { estadoVisivel: EstadoV
             <span className="text-lg">{j.avatar}</span>
             <span className="truncate text-sm font-semibold text-stone-100">{j.nome}</span>
             <span className="text-sm font-bold text-amber-300">{j.kleos}★</span>
+            <span className="text-xs text-stone-400" title={`${j.simbolosArgo} símbolo(s) do Argo`}>
+              ⛵{j.simbolosArgo}
+            </span>
+            <span
+              className={`text-xs ${j.temChronos ? 'text-stone-200' : 'text-stone-700'}`}
+              title={j.temChronos ? 'Tem a Essência de Chronos' : 'Sem a Essência de Chronos'}
+            >
+              ⧗{j.temChronos ? '✓' : '✗'}
+            </span>
+            {estadoVisivel.argonautas.dono === j.id && (
+              <span className="text-xs text-amber-400" title="Está com Os Argonautas">
+                👑
+              </span>
+            )}
             <span className="flex gap-0.5">
               {Array.from({ length: Math.min(3, j.lendas.length) }).map((_, i) => (
                 <span key={i} className="text-stone-600">
@@ -56,7 +70,7 @@ export function FaixaOponentesMobile({ estadoVisivel }: { estadoVisivel: EstadoV
             <div className="mb-3 flex justify-center">
               <span className="h-1.5 w-10 rounded-full bg-stone-700" />
             </div>
-            <DetalhesOponente jogador={jogadorAberto} />
+            <DetalhesOponente jogador={jogadorAberto} donoArgonautasId={estadoVisivel.argonautas.dono} />
             <button
               type="button"
               onClick={() => setAberto(null)}

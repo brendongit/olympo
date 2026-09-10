@@ -26,6 +26,7 @@ export function ModalFocoCarta({
   aoFechar,
 }: ModalFocoCartaProps) {
   const custosVisiveis = ORDEM_ESSENCIAS.filter((e) => lenda.custo[e] > 0);
+  const concedeChronos = lenda.chronos && !jogador.temChronos;
 
   return (
     <div
@@ -36,8 +37,13 @@ export function ModalFocoCarta({
         className="w-full max-w-sm rounded-xl border border-stone-700 bg-stone-900 p-4 shadow-2xl"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between">
           <span className="text-sm font-bold text-amber-300">{lenda.kleos > 0 ? `${lenda.kleos}★` : 'sem Kléos'}</span>
+          {lenda.argo > 0 && (
+            <span className="text-sm text-stone-300" title={`${lenda.argo} símbolo(s) do Argo`}>
+              {'⛵'.repeat(lenda.argo)}
+            </span>
+          )}
           <span
             className={`flex h-8 w-8 items-center justify-center rounded-full text-base ${INFO_FICHA[lenda.dominio].corFundo} ${INFO_FICHA[lenda.dominio].corTexto}`}
             title={`Domínio: ${INFO_FICHA[lenda.dominio].rotulo}`}
@@ -45,6 +51,14 @@ export function ModalFocoCarta({
             {INFO_FICHA[lenda.dominio].icone}
           </span>
         </div>
+
+        {lenda.chronos && (
+          <p
+            className={`mb-2 text-right text-xs font-semibold ${concedeChronos ? 'text-amber-300' : 'text-stone-600'}`}
+          >
+            ⧗ {concedeChronos ? 'Concede a Essência de Chronos' : 'Marca de Chronos — você já tem a Essência'}
+          </p>
+        )}
 
         <h2 className="mb-3 text-center font-serif text-2xl font-bold text-stone-100">
           {reservaOculta ? '🂠 Presságio oculto' : lenda.nome}

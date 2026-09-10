@@ -43,6 +43,22 @@ export function ModalDescarte({ estado }: { estado: EstadoJogo }) {
         <div className="mb-4 flex flex-col gap-2">
           {ORDEM_FICHAS.filter((f) => jogador.fichas[f] > 0).map((f) => {
             const info = INFO_FICHA[f];
+
+            // A Essência de Chronos nunca pode ser devolvida (Seção 8, casos
+            // de borda 7 e 8) — o seletor precisa exibi-la travada, com o motivo.
+            if (f === 'chronos') {
+              return (
+                <div key={f} className="flex items-center gap-2 opacity-70">
+                  <span className={`flex w-24 items-center gap-1 rounded px-2 py-1 text-sm ${info.corFundo} ${info.corTexto}`}>
+                    {info.icone} {info.rotulo}
+                  </span>
+                  <span className="flex-1 text-xs text-stone-400">
+                    🔒 a Essência de Chronos não pode ser devolvida
+                  </span>
+                </div>
+              );
+            }
+
             const qtd = selecionadas[f] ?? 0;
             return (
               <div key={f} className="flex items-center gap-2">

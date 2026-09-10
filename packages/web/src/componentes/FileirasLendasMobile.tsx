@@ -74,7 +74,12 @@ export function FileirasLendasMobile({ estado }: { estado: EstadoJogo }) {
                     className="shrink-0 snap-start text-left"
                     aria-label={`${lenda.nome}, ver detalhes e ações`}
                   >
-                    <CartaLenda lenda={lenda} pagamento={pagamento} acoes={[]} />
+                    <CartaLenda
+                      lenda={lenda}
+                      pagamento={pagamento}
+                      jogadorTemChronos={jogadorDaVez.temChronos}
+                      acoes={[]}
+                    />
                   </button>
                 );
               })}

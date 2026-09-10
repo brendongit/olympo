@@ -3,8 +3,14 @@ import { usePartida } from '../loja/usePartida.js';
 
 export function TelaFimDeJogo({ estado }: { estado: EstadoJogo }) {
   const reiniciar = usePartida((s) => s.reiniciar);
+  // Ordem de exibição (Seção 12.5): mais Kléos → quem tem Os Argonautas →
+  // menos Lendas. Só para exibir o placar completo — quem venceu de fato já
+  // vem pronto em estado.vencedores, calculado pelo motor.
   const ranking = [...estado.jogadores].sort(
-    (a, b) => b.kleos - a.kleos || a.lendas.length - b.lendas.length,
+    (a, b) =>
+      b.kleos - a.kleos ||
+      (estado.argonautas.dono === b.id ? 1 : 0) - (estado.argonautas.dono === a.id ? 1 : 0) ||
+      a.lendas.length - b.lendas.length,
   );
 
   return (
@@ -28,7 +34,8 @@ export function TelaFimDeJogo({ estado }: { estado: EstadoJogo }) {
               <th className="px-3 py-2">Jogador</th>
               <th className="px-3 py-2">Kléos</th>
               <th className="px-3 py-2">Lendas</th>
-              <th className="px-3 py-2">Deuses</th>
+              <th className="px-3 py-2">Santuários</th>
+              <th className="px-3 py-2">Os Argonautas</th>
             </tr>
           </thead>
           <tbody>
@@ -45,7 +52,8 @@ export function TelaFimDeJogo({ estado }: { estado: EstadoJogo }) {
                 </td>
                 <td className="px-3 py-2 font-bold text-amber-300">{j.kleos}</td>
                 <td className="px-3 py-2 text-stone-400">{j.lendas.length}</td>
-                <td className="px-3 py-2 text-stone-400">{j.deuses.length}</td>
+                <td className="px-3 py-2 text-stone-400">{j.santuarios.length}</td>
+                <td className="px-3 py-2 text-stone-400">{estado.argonautas.dono === j.id ? '⛵' : '—'}</td>
               </tr>
             ))}
           </tbody>

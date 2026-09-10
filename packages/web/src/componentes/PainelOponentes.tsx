@@ -14,7 +14,7 @@ export function PainelOponentes({ estadoVisivel }: { estadoVisivel: EstadoVisive
       <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Oponentes</h2>
       {oponentes.map((j) => (
         <div key={j.id} className="rounded-lg border border-stone-800 bg-stone-900/60 p-2">
-          <DetalhesOponente jogador={j} />
+          <DetalhesOponente jogador={j} donoArgonautasId={estadoVisivel.argonautas.dono} />
         </div>
       ))}
     </div>

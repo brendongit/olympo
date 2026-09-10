@@ -1,11 +1,11 @@
-// Seção 17.4 item 3 — painel do jogador como bottom-sheet arrastável.
+// Seção 19.4 item 3 — painel do jogador como bottom-sheet arrastável.
 // Recolhida: Kléos, fichas e presságios. Expandida: Domínios, Lendas por
-// Domínio e progresso dos Deuses. Arrasto é só interação — a legalidade de
-// qualquer ação continua vindo do motor (podePassar/podeReivindicar).
+// Domínio e progresso dos Santuários. Arrasto é só interação — a legalidade
+// de qualquer ação continua vindo do motor (podePassar/podeReivindicar).
 
 import { useRef, useState } from 'react';
 import type { EstadoJogo } from '@olympos/motor';
-import { calcularPagamento, DEUS_POR_ID, LENDA_POR_ID, podePassar, podeReivindicar } from '@olympos/motor';
+import { calcularPagamento, LENDA_POR_ID, podePassar, podeReivindicar, SANTUARIO_POR_ID } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
 import { ModalFocoCarta } from './ModalFocoCarta.js';
@@ -81,6 +81,20 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
         <span className="text-xl">{jogador.avatar}</span>
         <span className="font-serif text-lg font-bold text-amber-200">{jogador.nome}</span>
         <span className="text-xs text-stone-500">T{estado.numeroDoTurno + 1}</span>
+        <span className="text-xs text-stone-400" title={`${jogador.simbolosArgo} símbolo(s) do Argo`}>
+          ⛵{jogador.simbolosArgo}
+        </span>
+        <span
+          className={`text-xs ${jogador.temChronos ? 'text-stone-200' : 'text-stone-600'}`}
+          title={jogador.temChronos ? 'Tem a Essência de Chronos' : 'Sem a Essência de Chronos'}
+        >
+          ⧗{jogador.temChronos ? '✓' : '✗'}
+        </span>
+        {estado.argonautas.dono === jogador.id && (
+          <span className="text-xs text-amber-400" title="Você está com Os Argonautas">
+            👑
+          </span>
+        )}
         <span className="ml-auto text-lg font-bold text-amber-300">{jogador.kleos}★</span>
         <button
           type="button"
@@ -172,13 +186,13 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
           </div>
 
           <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
-            Progresso dos Deuses
+            Progresso dos Santuários
           </h3>
           <div className="flex flex-col gap-1">
-            {estado.deusesDisponiveis.map((id) => {
-              const deus = DEUS_POR_ID[id]!;
-              const requisitos = ORDEM_ESSENCIAS.filter((e) => deus.requisito[e] > 0);
-              const qualificado = requisitos.every((e) => jogador.dominios[e] >= deus.requisito[e]);
+            {estado.santuariosDisponiveis.map((id) => {
+              const santuario = SANTUARIO_POR_ID[id]!;
+              const requisitos = ORDEM_ESSENCIAS.filter((e) => santuario.requisito[e] > 0);
+              const qualificado = requisitos.every((e) => jogador.dominios[e] >= santuario.requisito[e]);
               return (
                 <div
                   key={id}
@@ -186,20 +200,20 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
                     qualificado ? 'bg-amber-400/10 text-amber-300' : 'bg-stone-800 text-stone-400'
                   }`}
                 >
-                  <span className="font-serif font-semibold">{deus.nome}</span>
+                  <span className="font-serif font-semibold">{santuario.nome}</span>
                   <span className="flex gap-1">
                     {requisitos.map((e) => (
                       <span key={e}>
                         {INFO_FICHA[e].icone}
-                        {jogador.dominios[e]}/{deus.requisito[e]}
+                        {jogador.dominios[e]}/{santuario.requisito[e]}
                       </span>
                     ))}
                   </span>
                 </div>
               );
             })}
-            {estado.deusesDisponiveis.length === 0 && (
-              <p className="text-xs text-stone-600">Todos os Deuses já foram concedidos.</p>
+            {estado.santuariosDisponiveis.length === 0 && (
+              <p className="text-xs text-stone-600">Todos os Santuários já foram concedidos.</p>
             )}
           </div>
         </div>
