@@ -26,8 +26,6 @@ services:
   - type: web
     name: olympos-web
     runtime: static
-    plan: free
-    region: oregon
     buildCommand: pnpm install --frozen-lockfile && pnpm --filter @olympos/web build
     staticPublishPath: packages/web/dist
     envVars:
