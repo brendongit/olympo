@@ -9,6 +9,8 @@ export interface InfoEssencia {
   corTexto: string;
   corFundo: string;
   corBorda: string;
+  /** Seção 20 — textura distinta por essência pro modo alto contraste, além de cor+ícone. CSS `background-image`. */
+  padraoAltoContraste?: string;
 }
 
 export const INFO_FICHA: Record<Ficha, InfoEssencia> = {
@@ -18,6 +20,7 @@ export const INFO_FICHA: Record<Ficha, InfoEssencia> = {
     corTexto: 'text-amber-950',
     corFundo: 'bg-amber-100',
     corBorda: 'border-amber-300',
+    padraoAltoContraste: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.25) 0 3px, transparent 3px 8px)',
   },
   oceano: {
     rotulo: 'Oceano',
@@ -25,6 +28,7 @@ export const INFO_FICHA: Record<Ficha, InfoEssencia> = {
     corTexto: 'text-white',
     corFundo: 'bg-blue-800',
     corBorda: 'border-blue-400',
+    padraoAltoContraste: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.3) 0 3px, transparent 3px 9px)',
   },
   terra: {
     rotulo: 'Terra',
@@ -32,6 +36,7 @@ export const INFO_FICHA: Record<Ficha, InfoEssencia> = {
     corTexto: 'text-white',
     corFundo: 'bg-green-800',
     corBorda: 'border-green-400',
+    padraoAltoContraste: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.3) 0 3px, transparent 3px 9px)',
   },
   chama: {
     rotulo: 'Chama',
@@ -39,6 +44,7 @@ export const INFO_FICHA: Record<Ficha, InfoEssencia> = {
     corTexto: 'text-white',
     corFundo: 'bg-red-800',
     corBorda: 'border-red-400',
+    padraoAltoContraste: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.3) 0 3px, transparent 3px 8px)',
   },
   sombra: {
     rotulo: 'Sombra',
@@ -46,6 +52,8 @@ export const INFO_FICHA: Record<Ficha, InfoEssencia> = {
     corTexto: 'text-white',
     corFundo: 'bg-violet-950',
     corBorda: 'border-violet-500',
+    padraoAltoContraste:
+      'radial-gradient(rgba(255,255,255,0.35) 1.2px, transparent 1.2px)',
   },
   icor: {
     rotulo: 'Ícor',
@@ -62,6 +70,23 @@ export const INFO_FICHA: Record<Ficha, InfoEssencia> = {
     corBorda: 'border-stone-400',
   },
 };
+
+/**
+ * Estilo inline pro modo de alto contraste (Seção 20) — devolve `{}` quando
+ * desligado ou quando a ficha não tem padrão (Ícor/Chronos, fora do
+ * mercado, já suficientemente distintos por não aparecerem ao lado de
+ * essências coloridas). `backgroundSize` casa com o espaçamento do
+ * gradiente de cada essência pra o padrão não esticar feio em botões de
+ * tamanhos diferentes.
+ */
+export function estiloAltoContraste(f: Ficha, ativo: boolean): React.CSSProperties {
+  if (!ativo) return {};
+  const padrao = INFO_FICHA[f].padraoAltoContraste;
+  if (!padrao) return {};
+  return f === 'sombra'
+    ? { backgroundImage: padrao, backgroundSize: '6px 6px' }
+    : { backgroundImage: padrao };
+}
 
 // Seção 2: ordem canônica das essências, usar sempre em toda UI.
 export const ORDEM_ESSENCIAS: Essencia[] = ['eter', 'oceano', 'terra', 'chama', 'sombra'];

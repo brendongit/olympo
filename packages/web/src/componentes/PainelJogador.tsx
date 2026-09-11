@@ -4,6 +4,7 @@
 // jogadorAtual sozinho. Presságios do dono do painel nunca vêm redigidos
 // pela projeção (Seção 18), então `cartaId` é sempre real aqui.
 
+import { motion } from 'framer-motion';
 import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podePassar, podeReivindicar } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
@@ -41,9 +42,13 @@ export function PainelJogador({
             ⧗{jogador.temChronos ? '✓' : '✗'}
           </span>
           {estadoVisivel.argonautas.dono === jogador.id && (
-            <span className="text-xs text-amber-400" title="Você está com Os Argonautas">
+            <motion.span
+              layoutId="argonautas-coroa"
+              className="text-xs text-amber-400"
+              title="Você está com Os Argonautas"
+            >
               👑
-            </span>
+            </motion.span>
           )}
           {jogador.santuarios.length > 0 && (
             <span className="text-xs text-amber-400">⛩ ×{jogador.santuarios.length}</span>

@@ -101,6 +101,24 @@ function votosNecessarios(sala: Sala): number {
   return Math.floor(contarConectados(sala) / 2) + 1;
 }
 
+/**
+ * Difunde só os eventos NOVOS do histórico (Seção 17.5 — animação e feed)
+ * depois de uma ação bem-sucedida. `tamanhoAntes` precisa ser capturado
+ * ANTES de `aplicarAcao` mutar `sala.partida`. Uma única ação pode gerar
+ * vários eventos numa chamada só (ex.: REIVINDICAR que também dispara
+ * ARGONAUTAS/SANTUARIO/ULTIMA_RODADA via `finalizarTurno`) — manda todos
+ * de uma vez, na ordem em que aconteceram. Seguro pra sala inteira, sem
+ * projeção por jogador: o motor já redige `cartaId` de presságios ocultos
+ * no próprio evento `RESERVOU` (Seção 18), então o histórico bruto nunca
+ * vaza informação privada.
+ */
+function emitirEventosNovos(sala: Sala, tamanhoAntes: number): void {
+  if (!sala.partida) return;
+  const novos = sala.partida.historico.slice(tamanhoAntes);
+  if (novos.length === 0) return;
+  io.to(sala.codigo).emit('jogo:evento', { eventos: novos });
+}
+
 function emitirVotacaoAtualizada(sala: Sala): void {
   io.to(sala.codigo).emit('jogo:votacao_atualizada', {
     votos: [...sala.votosEncerrar],
@@ -172,11 +190,13 @@ function dispararAcaoAutomatica(codigo: string): void {
     acao = colheitaAutomatica(estado);
   }
 
+  const tamanhoAntes = estado.historico.length;
   const resultado = registroDeSalas.aplicarAcao(sala.codigo, acao);
   if (resultado.ok) {
     checarInvariantesEmDev(resultado.valor, `ação automática ${acao.tipo}`);
     const jogadorNaPartida = resultado.valor.jogadores.find((j) => j.id === jogadorAfetadoId);
     if (jogadorNaPartida) jogadorNaPartida.turnosAusente += 1;
+    emitirEventosNovos(sala, tamanhoAntes);
     emitirEstadoDoJogo(sala);
   }
   // Se a ação automática for rejeitada (raro — ver Seção 17.6, caso de borda
@@ -352,6 +372,7 @@ io.on('connection', (socket: Socket) => {
 
     // A identidade nunca vem do payload — sempre da sessão do socket (Seção 17.1).
     const acao: Acao = { ...payload.acao, jogadorId: dados.jogadorId };
+    const tamanhoAntes = sala.partida.historico.length;
     const resultado = registroDeSalas.aplicarAcao(sala.codigo, acao);
 
     if (!resultado.ok) {
@@ -368,6 +389,7 @@ io.on('connection', (socket: Socket) => {
 
     agendarProximoTurno(sala);
     ack?.({ ok: true });
+    emitirEventosNovos(sala, tamanhoAntes);
     emitirEstadoDoJogo(sala);
   });
 
@@ -426,6 +448,7 @@ io.on('connection', (socket: Socket) => {
     }
 
     if (sala.votosEncerrar.size >= votosNecessarios(sala)) {
+      const tamanhoAntes = sala.partida.historico.length;
       const resultado = registroDeSalas.aplicarAcao(sala.codigo, {
         tipo: 'ENCERRAR_ABANDONO',
         jogadorId: dados.jogadorId,
@@ -434,6 +457,7 @@ io.on('connection', (socket: Socket) => {
         checarInvariantesEmDev(resultado.valor, 'ENCERRAR_ABANDONO por votação');
         sala.votosEncerrar.clear();
         agendarProximoTurno(sala); // limpa o timer de turno — fase já é ENCERRADO
+        emitirEventosNovos(sala, tamanhoAntes);
         emitirEstadoDoJogo(sala);
         return;
       }

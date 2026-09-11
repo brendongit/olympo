@@ -5,9 +5,15 @@
 import type { EstadoVisivel } from '@olympos/motor';
 import { DetalhesOponente } from './DetalhesOponente.js';
 
-export function PainelOponentes({ estadoVisivel }: { estadoVisivel: EstadoVisivel }) {
-  const idJogadorDaVez = estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!.id;
-  const oponentes = estadoVisivel.jogadores.filter((j) => j.id !== idJogadorDaVez);
+export function PainelOponentes({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
+  const idJogadorFoco = jogadorFocoId ?? estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!.id;
+  const oponentes = estadoVisivel.jogadores.filter((j) => j.id !== idJogadorFoco);
 
   return (
     <div className="flex w-full flex-col gap-2 overflow-y-auto">

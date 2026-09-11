@@ -3,10 +3,15 @@
 // numa seleção e despacha quando ela fica completa.
 
 import { useEffect, useState } from 'react';
-import type { Essencia, EstadoVisivel } from '@olympos/motor';
+import type { Essencia, EstadoVisivel, Ficha } from '@olympos/motor';
 import { podeColherIguais } from '@olympos/motor';
-import { INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
+import { estiloAltoContraste, INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
+import { useEventosDoJogo } from '../lib/useEventosDoJogo.js';
+import { useNavegacaoPorSetas } from '../lib/useNavegacaoPorSetas.js';
 import { usePartida } from '../loja/usePartida.js';
+import { usePreferencias } from '../loja/usePreferencias.js';
+
+const DURACAO_PULSO_MS = 300;
 
 export function Reservatorio({
   estadoVisivel,
@@ -16,8 +21,28 @@ export function Reservatorio({
   jogadorFocoId?: string;
 }) {
   const despachar = usePartida((s) => s.despachar);
+  const altoContraste = usePreferencias((s) => s.altoContraste);
+  const { containerRef, aoTeclar } = useNavegacaoPorSetas<HTMLDivElement>();
   const [selecionadas, setSelecionadas] = useState<Essencia[]>([]);
+  const [pulsando, setPulsando] = useState<Set<Ficha>>(new Set());
   const jogadorId = jogadorFocoId ?? estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!.id;
+
+  // Seção 19.8 — "ficha colhida voa do reservatório ao painel": em vez de um
+  // token voando de verdade (exigiria medir posição de DOM entre
+  // componentes não relacionados), um pulso sincronizado no reservatório dá
+  // o mesmo feedback causal com uma fração do esforço.
+  useEventosDoJogo((evento) => {
+    if (evento.t !== 'COLHEU' && evento.t !== 'DEVOLVEU') return;
+    const chaves = Object.keys(evento.fichas) as Ficha[];
+    setPulsando((atual) => new Set([...atual, ...chaves]));
+    setTimeout(() => {
+      setPulsando((atual) => {
+        const novo = new Set(atual);
+        for (const c of chaves) novo.delete(c);
+        return novo;
+      });
+    }, DURACAO_PULSO_MS);
+  });
 
   const disponiveis = (['eter', 'oceano', 'terra', 'chama', 'sombra'] as const).filter(
     (e) => estadoVisivel.reservatorio[e] > 0,
@@ -57,7 +82,7 @@ export function Reservatorio({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div ref={containerRef} onKeyDown={aoTeclar} role="group" aria-label="Fichas do reservatório" className="flex flex-wrap gap-2">
         {ORDEM_FICHAS.map((f) => {
           const info = INFO_FICHA[f];
           const quantidade = estadoVisivel.reservatorio[f];
@@ -73,6 +98,7 @@ export function Reservatorio({
                 )}
                 <div
                   className={`flex flex-col items-center rounded-lg border px-3 py-2 ${info.corBorda} ${info.corFundo} ${info.corTexto} opacity-80`}
+                  style={estiloAltoContraste(f, altoContraste)}
                   title={
                     f === 'icor'
                       ? 'Ícor não pode ser colhido diretamente — só via Reservar'
@@ -80,7 +106,11 @@ export function Reservatorio({
                   }
                 >
                   <span className="text-lg">{info.icone}</span>
-                  <span className="text-sm font-bold">{quantidade}</span>
+                  <span
+                    className={`text-sm font-bold transition-transform duration-300 motion-reduce:transition-none ${pulsando.has(f) ? 'scale-125 text-amber-300' : ''}`}
+                  >
+                    {quantidade}
+                  </span>
                 </div>
               </div>
             );
@@ -99,6 +129,7 @@ export function Reservatorio({
                 type="button"
                 onClick={() => alternar(essencia)}
                 disabled={!podeSelecionar}
+                style={estiloAltoContraste(f, altoContraste)}
                 title={
                   quantidade === 0
                     ? 'Pilha vazia'
@@ -115,7 +146,11 @@ export function Reservatorio({
                 }`}
               >
                 <span className="text-lg">{info.icone}</span>
-                <span className="text-sm font-bold">{quantidade}</span>
+                <span
+                  className={`text-sm font-bold transition-transform duration-300 motion-reduce:transition-none ${pulsando.has(f) ? 'scale-125 text-amber-300' : ''}`}
+                >
+                  {quantidade}
+                </span>
               </button>
               <button
                 type="button"

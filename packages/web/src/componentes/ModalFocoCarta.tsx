@@ -5,6 +5,7 @@
 // componente apenas formata o texto.
 
 import type { Bolsa, JogadorOuVisivel, Lenda } from '@olympos/motor';
+import { useFecharComEsc } from '../lib/useFecharComEsc.js';
 import { INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
 import type { AcaoCarta } from './CartaLenda.js';
 
@@ -25,6 +26,7 @@ export function ModalFocoCarta({
   reservaOculta,
   aoFechar,
 }: ModalFocoCartaProps) {
+  useFecharComEsc(aoFechar);
   const custosVisiveis = ORDEM_ESSENCIAS.filter((e) => lenda.custo[e] > 0);
   const concedeChronos = lenda.chronos && !jogador.temChronos;
 

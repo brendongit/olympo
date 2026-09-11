@@ -4,17 +4,23 @@
 
 import type { EstadoVisivel } from '@olympos/motor';
 import { useEhMobile } from '../lib/useMediaQuery.js';
+import { AnuncioSuaVez } from './AnuncioSuaVez.js';
+import { BannerGatilhoDesfeito } from './BannerGatilhoDesfeito.js';
+import { ChronosObtidoOverlay } from './ChronosObtidoOverlay.js';
 import { ContadorDeTurno } from './ContadorDeTurno.js';
 import { BarraKeraunosCompacta, PainelKeraunos } from './PainelKeraunos.js';
+import { FeedDeEventos } from './FeedDeEventos.js';
 import { FileirasLendas } from './FileirasLendas.js';
 import { IndicadorArgonautas } from './IndicadorArgonautas.js';
 import { ModalDescarte } from './ModalDescarte.js';
 import { ModalEscolherSantuario } from './ModalEscolherSantuario.js';
 import { PainelJogador } from './PainelJogador.js';
 import { PainelOponentes } from './PainelOponentes.js';
+import { PainelPreferencias } from './PainelPreferencias.js';
 import { PainelSantuarios } from './PainelSantuarios.js';
 import { PainelVotacaoEncerrar } from './PainelVotacaoEncerrar.js';
 import { Reservatorio } from './Reservatorio.js';
+import { SantuarioConquistadoOverlay } from './SantuarioConquistadoOverlay.js';
 import { TelaFimDeJogo } from './TelaFimDeJogo.js';
 import { TelaJogoMobile } from './TelaJogoMobile.js';
 
@@ -50,6 +56,7 @@ export function TelaJogo({
           <PainelVotacaoEncerrar estadoVisivel={estadoVisivel} />
           <ContadorDeTurno estadoVisivel={estadoVisivel} />
           <BarraKeraunosCompacta estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
+          <PainelPreferencias />
         </div>
         {estadoVisivel.fase === 'ULTIMA_RODADA' && (
           <span className="rounded bg-red-800 px-2 py-0.5 text-xs font-semibold text-red-100" aria-live="assertive">
@@ -59,6 +66,8 @@ export function TelaJogo({
           </span>
         )}
       </header>
+
+      <BannerGatilhoDesfeito />
 
       <div className="grid flex-1 grid-cols-[240px_1fr_260px] overflow-hidden">
         <aside className="flex flex-col gap-3 overflow-y-auto border-r border-stone-800 p-3">
@@ -73,7 +82,8 @@ export function TelaJogo({
 
         <aside className="flex flex-col gap-3 overflow-y-auto border-l border-stone-800 p-3">
           <IndicadorArgonautas estadoVisivel={estadoVisivel} />
-          <PainelOponentes estadoVisivel={estadoVisivel} />
+          <PainelOponentes estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
+          <FeedDeEventos />
         </aside>
       </div>
 
@@ -83,6 +93,10 @@ export function TelaJogo({
       {estadoVisivel.subFase === 'ESCOLHENDO_SANTUARIO' && (
         <ModalEscolherSantuario estadoVisivel={estadoVisivel} />
       )}
+
+      <ChronosObtidoOverlay />
+      <SantuarioConquistadoOverlay />
+      <AnuncioSuaVez />
     </div>
   );
 }

@@ -3,13 +3,20 @@
 // EstadoVisivel (projeção pública, Seção 16) — nunca o EstadoJogo real.
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import type { EstadoVisivel } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
 import { DetalhesOponente } from './DetalhesOponente.js';
 
-export function FaixaOponentesMobile({ estadoVisivel }: { estadoVisivel: EstadoVisivel }) {
-  const idJogadorDaVez = estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!.id;
-  const oponentes = estadoVisivel.jogadores.filter((j) => j.id !== idJogadorDaVez);
+export function FaixaOponentesMobile({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
+  const idJogadorFoco = jogadorFocoId ?? estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!.id;
+  const oponentes = estadoVisivel.jogadores.filter((j) => j.id !== idJogadorFoco);
   const [aberto, setAberto] = useState<string | null>(null);
   const jogadorAberto = oponentes.find((j) => j.id === aberto) ?? null;
 
@@ -37,9 +44,13 @@ export function FaixaOponentesMobile({ estadoVisivel }: { estadoVisivel: EstadoV
               ⧗{j.temChronos ? '✓' : '✗'}
             </span>
             {estadoVisivel.argonautas.dono === j.id && (
-              <span className="text-xs text-amber-400" title="Está com Os Argonautas">
+              <motion.span
+                layoutId="argonautas-coroa"
+                className="text-xs text-amber-400"
+                title="Está com Os Argonautas"
+              >
                 👑
-              </span>
+              </motion.span>
             )}
             <span className="flex gap-0.5">
               {Array.from({ length: Math.min(3, j.lendas.length) }).map((_, i) => (

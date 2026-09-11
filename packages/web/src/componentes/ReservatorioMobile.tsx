@@ -4,14 +4,18 @@
 // despachar, nunca SE é legal.
 
 import { useEffect, useRef, useState } from 'react';
-import type { Essencia, EstadoVisivel } from '@olympos/motor';
+import type { Essencia, EstadoVisivel, Ficha } from '@olympos/motor';
 import { podeColherIguais } from '@olympos/motor';
-import { INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
+import { estiloAltoContraste, INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
+import { useEventosDoJogo } from '../lib/useEventosDoJogo.js';
+import { useNavegacaoPorSetas } from '../lib/useNavegacaoPorSetas.js';
 import { usePartida } from '../loja/usePartida.js';
+import { usePreferencias } from '../loja/usePreferencias.js';
 
 const ATRASO_TOQUE_LONGO_MS = 300;
 const JANELA_DUPLO_TOQUE_MS = 350;
 const ATRASO_CONFIRMACAO_MS = 400;
+const DURACAO_PULSO_MS = 300;
 
 export function ReservatorioMobile({
   estadoVisivel,
@@ -21,10 +25,28 @@ export function ReservatorioMobile({
   jogadorFocoId?: string;
 }) {
   const despachar = usePartida((s) => s.despachar);
+  const altoContraste = usePreferencias((s) => s.altoContraste);
+  const { containerRef, aoTeclar } = useNavegacaoPorSetas<HTMLDivElement>();
   const [selecionadas, setSelecionadas] = useState<Essencia[]>([]);
   const [confirmando, setConfirmando] = useState(false);
   const [avisoCadeado, setAvisoCadeado] = useState<string | null>(null);
+  const [pulsando, setPulsando] = useState<Set<Ficha>>(new Set());
   const jogadorId = jogadorFocoId ?? estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!.id;
+
+  // Seção 19.8 — pulso sincronizado no lugar de um token voando de verdade
+  // (mesma decisão de escopo do Reservatorio desktop).
+  useEventosDoJogo((evento) => {
+    if (evento.t !== 'COLHEU' && evento.t !== 'DEVOLVEU') return;
+    const chaves = Object.keys(evento.fichas) as Ficha[];
+    setPulsando((atual) => new Set([...atual, ...chaves]));
+    setTimeout(() => {
+      setPulsando((atual) => {
+        const novo = new Set(atual);
+        for (const c of chaves) novo.delete(c);
+        return novo;
+      });
+    }, DURACAO_PULSO_MS);
+  });
 
   const toqueLongoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toqueLongoDisparouRef = useRef(false);
@@ -164,7 +186,13 @@ export function ReservatorioMobile({
         <p className="mb-2 rounded bg-stone-800 px-2 py-1 text-xs text-amber-300">🔒 {avisoCadeado}</p>
       )}
 
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <div
+        ref={containerRef}
+        onKeyDown={aoTeclar}
+        role="group"
+        aria-label="Fichas do reservatório"
+        className="grid grid-cols-3 gap-2 sm:grid-cols-6"
+      >
         {ORDEM_FICHAS.map((f) => {
           const info = INFO_FICHA[f];
           const quantidade = estadoVisivel.reservatorio[f];
@@ -176,6 +204,7 @@ export function ReservatorioMobile({
               <div
                 key={f}
                 className={`flex min-h-[48px] min-w-[48px] flex-col items-center justify-center rounded-lg border px-2 py-2 ${info.corBorda} ${info.corFundo} ${info.corTexto} opacity-80`}
+                style={estiloAltoContraste(f, altoContraste)}
                 title={
                   f === 'icor'
                     ? 'Ícor não pode ser colhido diretamente — só via Reservar'
@@ -183,7 +212,11 @@ export function ReservatorioMobile({
                 }
               >
                 <span className="text-lg">{info.icone}</span>
-                <span className="text-sm font-bold">{quantidade}</span>
+                <span
+                  className={`text-sm font-bold transition-transform duration-300 motion-reduce:transition-none ${pulsando.has(f) ? 'scale-125 text-amber-300' : ''}`}
+                >
+                  {quantidade}
+                </span>
               </div>
             );
           }
@@ -210,11 +243,16 @@ export function ReservatorioMobile({
                     ? `${info.corBorda}`
                     : 'border-transparent opacity-40'
               }`}
+              style={estiloAltoContraste(f, altoContraste)}
               aria-label={`${info.rotulo}: ${quantidade} disponíveis${travada ? ', precisa de 4 para colher 2 iguais' : ''}`}
             >
               {travada && <span className="absolute right-1 top-1 text-[10px]">🔒</span>}
               <span className="text-lg">{info.icone}</span>
-              <span className="text-sm font-bold">{quantidade}</span>
+              <span
+                className={`text-sm font-bold transition-transform duration-300 motion-reduce:transition-none ${pulsando.has(f) ? 'scale-125 text-amber-300' : ''}`}
+              >
+                {quantidade}
+              </span>
             </button>
           );
         })}

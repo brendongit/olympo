@@ -1,13 +1,14 @@
 # Deploy no Render — plano gratuito (Seção 17.7 da spec).
 #
-# Por ora, só o servidor. O static site de packages/web fica de fora deste
-# blueprint até a UI ser migrada para o ruleset Marvel — o build dela
-# (`tsc -b --noEmit && vite build`) falha hoje por causa de código que ainda
-# referencia o ruleset clássico (Deus/Favor Divino). Quando isso for
-# resolvido, descomente o bloco no fim do arquivo.
-#
 # Sem banco de dados algum — as salas vivem em memória no processo do
 # servidor (decisão 1: sem Redis, sem Postgres).
+#
+# Depois do primeiro deploy do olympos-web, preencha ORIGEM_PERMITIDA abaixo
+# com a URL gerada pro olympos-web (ex.: https://olympos-web.onrender.com) e
+# VITE_SERVIDOR_URL com a URL do olympos-servidor
+# (https://olympos-servidor.onrender.com). VITE_SERVIDOR_URL é lida em tempo
+# de BUILD pelo Vite — mudar seu valor exige um novo deploy do static site,
+# não só um restart.
 
 services:
   - type: web
@@ -22,23 +23,17 @@ services:
       - key: ORIGEM_PERMITIDA
         sync: false # preencha com a origem que vai consumir o servidor (ver README de deploy)
 
-# Reative quando packages/web buildar sem erros:
-#
-#   - type: web
-#     name: olympos-web
-#     runtime: static
-#     plan: free
-#     region: oregon
-#     buildCommand: pnpm install --frozen-lockfile && pnpm --filter @olympos/web build
-#     staticPublishPath: packages/web/dist
-#     envVars:
-#       - key: VITE_SERVIDOR_URL
-#         sync: false # ex.: https://olympos-servidor.onrender.com
-#     routes:
-#       - type: rewrite
-#         source: /*
-#         destination: /index.html
-#
-# Depois de reativar, preencha ORIGEM_PERMITIDA acima com a URL do olympos-web
-# (VITE_SERVIDOR_URL é lida em tempo de BUILD pelo Vite — mudar seu valor
-# exige um novo deploy do static site, não só um restart).
+  - type: web
+    name: olympos-web
+    runtime: static
+    plan: free
+    region: oregon
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @olympos/web build
+    staticPublishPath: packages/web/dist
+    envVars:
+      - key: VITE_SERVIDOR_URL
+        sync: false # ex.: https://olympos-servidor.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

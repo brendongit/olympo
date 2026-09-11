@@ -13,9 +13,12 @@
 // fica desabilitado ("pendente") até a confirmação ou rejeição do servidor.
 
 import { create } from 'zustand';
-import type { Acao, EstadoJogo, EstadoVisivel } from '@olympos/motor';
+import type { Acao, EstadoJogo, EstadoVisivel, EventoJogo } from '@olympos/motor';
 import { criarPartida, projetarPara, reduzir, verificarInvariantes } from '@olympos/motor';
 import { conectarSocket, desconectarSocket } from '../rede/socket.js';
+
+const TAMANHO_MAX_FEED = 50;
+let proximoIdFeed = 0;
 
 const AVATARES = ['🦉', '🔱', '🏹', '🛡️'];
 const CHAVE_SESSAO = 'olympos:sessao';
@@ -82,6 +85,11 @@ export interface VotacaoEncerrar {
   necessarios: number;
 }
 
+export interface ItemDoFeed {
+  id: number;
+  evento: EventoJogo;
+}
+
 interface LojaPartida {
   modo: 'local' | 'online' | null;
 
@@ -101,6 +109,13 @@ interface LojaPartida {
   /** Estado da votação de encerramento por abandono (Seção 17.6), só online. */
   votacaoEncerrar: VotacaoEncerrar | null;
 
+  /** Eventos da atualização mais recente (Seção 17.5) — substituído, nunca acumulado. Ver useEventosDoJogo. */
+  eventosNovos: EventoJogo[];
+  /** Incrementa a cada atualização, mesmo se `eventosNovos` ficar vazio — dependency key pro consumidor. */
+  eventosVersao: number;
+  /** Log persistente pro feed narrativo, mais recente por último, capado em 50. */
+  feed: ItemDoFeed[];
+
   iniciarPartidaLocal: (nomes: string[]) => void;
 
   entrarModoOnline: () => void;
@@ -114,6 +129,18 @@ interface LojaPartida {
   despachar: (acao: Acao) => void;
   limparErro: () => void;
   reiniciar: () => void;
+}
+
+/** Empurra um lote de eventos novos pro feed + pro consumo transiente (overlays, aria-live). Compartilhado entre o listener online e o diff local. */
+function registrarEventosNovos(
+  set: (parcial: Partial<LojaPartida>) => void,
+  get: () => LojaPartida,
+  eventos: EventoJogo[],
+): void {
+  if (eventos.length === 0) return;
+  const itens = eventos.map((evento) => ({ id: proximoIdFeed++, evento }));
+  const feed = [...get().feed, ...itens].slice(-TAMANHO_MAX_FEED);
+  set({ feed, eventosNovos: eventos, eventosVersao: get().eventosVersao + 1 });
 }
 
 let listenersRegistrados = false;
@@ -138,7 +165,14 @@ function registrarListenersDeSocket(set: (parcial: Partial<LojaPartida>) => void
   });
 
   socket.on('jogo:iniciado', (payload: { estadoVisivel: EstadoVisivel }) => {
-    set({ estadoVisivel: payload.estadoVisivel, ultimoErro: null, pendente: null });
+    set({
+      estadoVisivel: payload.estadoVisivel,
+      ultimoErro: null,
+      pendente: null,
+      feed: [],
+      eventosNovos: [],
+      eventosVersao: 0,
+    });
   });
 
   socket.on('jogo:estado', (payload: { versao: number; estadoVisivel: EstadoVisivel }) => {
@@ -154,6 +188,10 @@ function registrarListenersDeSocket(set: (parcial: Partial<LojaPartida>) => void
     set({ votacaoEncerrar: payload });
   });
 
+  socket.on('jogo:evento', (payload: { eventos: EventoJogo[] }) => {
+    registrarEventosNovos(set, get, payload.eventos);
+  });
+
   socket.on('sala:revanche_pronta', (payload: { codigo: string; jogadorId: string }) => {
     salvarSessao(payload);
     set({
@@ -162,6 +200,9 @@ function registrarListenersDeSocket(set: (parcial: Partial<LojaPartida>) => void
       saguao: null,
       votacaoEncerrar: null,
       ultimoErro: null,
+      feed: [],
+      eventosNovos: [],
+      eventosVersao: 0,
     });
   });
 }
@@ -175,6 +216,9 @@ export const usePartida = create<LojaPartida>((set, get) => ({
   saguao: null,
   pendente: null,
   votacaoEncerrar: null,
+  eventosNovos: [],
+  eventosVersao: 0,
+  feed: [],
 
   iniciarPartidaLocal: (nomes) => {
     const estado = criarPartida({
@@ -194,6 +238,9 @@ export const usePartida = create<LojaPartida>((set, get) => ({
       estadoVisivel: projetarPara(estado, jogadorDaVez.id),
       meuJogadorId: null,
       ultimoErro: null,
+      feed: [],
+      eventosNovos: [],
+      eventosVersao: 0,
     });
   },
 
@@ -307,6 +354,7 @@ export const usePartida = create<LojaPartida>((set, get) => ({
       estadoVisivel: projetarPara(resultado.valor, jogadorDaVez.id),
       ultimoErro: null,
     });
+    registrarEventosNovos(set, get, resultado.valor.historico.slice(atual.historico.length));
   },
 
   limparErro: () => set({ ultimoErro: null }),
@@ -326,6 +374,9 @@ export const usePartida = create<LojaPartida>((set, get) => ({
       pendente: null,
       votacaoEncerrar: null,
       ultimoErro: null,
+      feed: [],
+      eventosNovos: [],
+      eventosVersao: 0,
     });
   },
 }));

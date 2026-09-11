@@ -6,6 +6,7 @@
 // oponente, e quem está com Os Argonautas, precisam estar sempre visíveis —
 // nunca atrás de um toque a mais.
 
+import { motion } from 'framer-motion';
 import type { JogadorVisivel } from '@olympos/motor';
 import { LENDA_POR_ID } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
@@ -31,9 +32,13 @@ export function DetalhesOponente({
             </span>
           )}
           {donoArgonautasId === j.id && (
-            <span className="text-xs text-amber-400" title="Está com Os Argonautas">
+            <motion.span
+              layoutId="argonautas-coroa"
+              className="text-xs text-amber-400"
+              title="Está com Os Argonautas"
+            >
               ⛵👑
-            </span>
+            </motion.span>
           )}
         </span>
         <span className="text-sm font-bold text-amber-300">{j.kleos}★</span>

@@ -114,14 +114,16 @@ pnpm typecheck    # verificação de tipos de todos os pacotes
 - **`packages/motor`** — migrado para o ruleset de Splendor: Marvel.
   Typecheck limpo, suíte de testes completa (incluindo fuzz de invariantes
   contra centenas de turnos aleatórios).
-- **`packages/web`** — ainda roda hotseat local sobre o ruleset clássico
-  (Splendor original). A migração da interface para o ruleset novo — trocar
-  "Deuses"/Favor Divino por Santuários, adicionar Os Argonautas e a Essência
-  de Chronos na UI — está em andamento.
-- **`packages/servidor`** — esqueleto mínimo: `GET /health`, CORS, e um
-  saguão (`sala:criar`/`sala:entrar`) com limpeza automática de salas vazias.
-  O protocolo completo de jogo em rede (ações, reconciliação, reconexão)
-  ainda não foi implementado.
+- **`packages/web`** — interface migrada para o ruleset Marvel (Santuários,
+  Os Argonautas, Chronos, painel do Keraunos), com hotseat local e modo
+  online (saguão, jogo em tempo real, reconexão). Fase de polimento
+  (animações, feed de eventos, acessibilidade) implementada; som fica de
+  fora por depender de assets de áudio.
+- **`packages/servidor`** — autoridade de jogo em rede: saguão
+  (`sala:criar`/`sala:entrar`/`sala:sair`), partida em tempo real
+  (`jogo:acao`, reconciliação, reconexão via `jogo:sincronizar`), timer de
+  turno com ação automática, votação de encerramento por abandono e
+  revanche.
 
 ## Deploy
 

@@ -3,8 +3,10 @@
 // calcularPagamento) e só decide como desenhar — nenhuma regra é decidida
 // aqui.
 
+import { motion } from 'framer-motion';
 import type { Bolsa, Lenda } from '@olympos/motor';
-import { COR_NIVEL, INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
+import { COR_NIVEL, estiloAltoContraste, INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
+import { usePreferencias } from '../loja/usePreferencias.js';
 
 export interface AcaoCarta {
   rotulo: string;
@@ -25,11 +27,12 @@ interface CartaLendaProps {
 }
 
 export function CartaLenda({ lenda, pagamento, acoes, reservaOculta, jogadorTemChronos }: CartaLendaProps) {
+  const altoContraste = usePreferencias((s) => s.altoContraste);
   const precisaIcor = !!pagamento?.possivel && pagamento.pagamento.icor > 0;
   const reivindicavelDireto = !!pagamento?.possivel && pagamento.pagamento.icor === 0;
 
   const borda = reivindicavelDireto
-    ? 'border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)] animate-pulse'
+    ? 'border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)] animate-pulse motion-reduce:animate-none'
     : precisaIcor
       ? 'border-amber-400'
       : `${COR_NIVEL[lenda.nivel]}`;
@@ -37,12 +40,26 @@ export function CartaLenda({ lenda, pagamento, acoes, reservaOculta, jogadorTemC
   const custosVisiveis = ORDEM_ESSENCIAS.filter((e) => lenda.custo[e] > 0);
   const concedeChronos = lenda.chronos && !jogadorTemChronos;
 
+  // Seção 20: aria-label completo — nome/nível/domínio/kléos/argo/chronos +
+  // custo por extenso + estado de cada ação, pra não depender só do visual.
+  const custoFalado =
+    custosVisiveis.length === 0
+      ? 'grátis'
+      : `custo ${custosVisiveis
+          .map((e) => `${lenda.custo[e]} ${INFO_FICHA[e].rotulo}`)
+          .join(', ')
+          .replace(/, ([^,]*)$/, ' e $1')}`;
+  const estadosFalados = acoes
+    .map((a) => `${a.habilitado ? 'Você pode' : 'Não é possível'} ${a.rotulo.toLowerCase()}${!a.habilitado && a.motivo ? ` (${a.motivo})` : ''}`)
+    .join('. ');
+
   return (
-    <div
+    <motion.div
+      layoutId={`carta-${lenda.id}`}
       className={`flex w-36 flex-col rounded-lg border-2 bg-stone-900 p-2 text-stone-100 ${borda}`}
       aria-label={`${lenda.nome}, nível ${lenda.nivel}, domínio ${INFO_FICHA[lenda.dominio].rotulo}, ${lenda.kleos} Kléos${
         lenda.argo > 0 ? `, ${lenda.argo} símbolo${lenda.argo > 1 ? 's' : ''} do Argo` : ''
-      }${concedeChronos ? ', concede a Essência de Chronos' : ''}`}
+      }${concedeChronos ? ', concede a Essência de Chronos' : ''}, ${custoFalado}${estadosFalados ? `. ${estadosFalados}` : ''}`}
     >
       <div className="mb-1 flex items-center justify-between text-sm font-bold">
         <span title="Kléos">{lenda.kleos > 0 ? `${lenda.kleos}★` : '—'}</span>
@@ -53,6 +70,7 @@ export function CartaLenda({ lenda, pagamento, acoes, reservaOculta, jogadorTemC
         )}
         <span
           className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${INFO_FICHA[lenda.dominio].corFundo} ${INFO_FICHA[lenda.dominio].corTexto}`}
+          style={estiloAltoContraste(lenda.dominio, altoContraste)}
           title={`Domínio: ${INFO_FICHA[lenda.dominio].rotulo}`}
         >
           {INFO_FICHA[lenda.dominio].icone}
@@ -62,7 +80,7 @@ export function CartaLenda({ lenda, pagamento, acoes, reservaOculta, jogadorTemC
       {lenda.chronos && (
         <div className="mb-1 flex justify-end">
           <span
-            className={`text-xs ${concedeChronos ? 'text-amber-300 animate-pulse' : 'text-stone-700'}`}
+            className={`text-xs ${concedeChronos ? 'text-amber-300 animate-pulse motion-reduce:animate-none' : 'text-stone-700'}`}
             title={concedeChronos ? 'Concede a Essência de Chronos' : 'Marca de Chronos — você já tem a Essência'}
           >
             ⧗
@@ -82,6 +100,7 @@ export function CartaLenda({ lenda, pagamento, acoes, reservaOculta, jogadorTemC
             <span
               key={e}
               className={`flex items-center gap-0.5 rounded px-1 text-xs ${INFO_FICHA[e].corFundo} ${INFO_FICHA[e].corTexto}`}
+              style={estiloAltoContraste(e, altoContraste)}
               title={INFO_FICHA[e].rotulo}
             >
               {INFO_FICHA[e].icone}
@@ -121,6 +140,6 @@ export function CartaLenda({ lenda, pagamento, acoes, reservaOculta, jogadorTemC
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

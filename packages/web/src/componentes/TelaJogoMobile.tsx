@@ -4,17 +4,23 @@
 // toque grandes e o painel do jogador como bottom-sheet.
 
 import type { EstadoVisivel } from '@olympos/motor';
+import { AnuncioSuaVez } from './AnuncioSuaVez.js';
+import { BannerGatilhoDesfeito } from './BannerGatilhoDesfeito.js';
+import { ChronosObtidoOverlay } from './ChronosObtidoOverlay.js';
 import { ContadorDeTurno } from './ContadorDeTurno.js';
 import { BarraKeraunosCompacta } from './PainelKeraunos.js';
 import { AcordeaoSantuarios } from './AcordeaoSantuarios.js';
 import { FaixaOponentesMobile } from './FaixaOponentesMobile.js';
+import { FeedDeEventos } from './FeedDeEventos.js';
 import { FileirasLendasMobile } from './FileirasLendasMobile.js';
 import { IndicadorArgonautas } from './IndicadorArgonautas.js';
 import { ModalDescarte } from './ModalDescarte.js';
 import { ModalEscolherSantuario } from './ModalEscolherSantuario.js';
 import { PainelJogadorSheet } from './PainelJogadorSheet.js';
+import { PainelPreferencias } from './PainelPreferencias.js';
 import { PainelVotacaoEncerrar } from './PainelVotacaoEncerrar.js';
 import { ReservatorioMobile } from './ReservatorioMobile.js';
+import { SantuarioConquistadoOverlay } from './SantuarioConquistadoOverlay.js';
 import { TelaFimDeJogo } from './TelaFimDeJogo.js';
 
 export function TelaJogoMobile({
@@ -39,6 +45,7 @@ export function TelaJogoMobile({
           Vez de <span className="font-semibold text-amber-300">{jogadorDaVez.nome}</span>
         </span>
         <ContadorDeTurno estadoVisivel={estadoVisivel} />
+        <PainelPreferencias />
         <button
           type="button"
           className="flex min-h-[44px] min-w-[44px] items-center justify-center text-lg text-stone-400"
@@ -61,9 +68,11 @@ export function TelaJogoMobile({
         </div>
       )}
 
+      <BannerGatilhoDesfeito />
+
       <PainelVotacaoEncerrar estadoVisivel={estadoVisivel} />
 
-      <FaixaOponentesMobile estadoVisivel={estadoVisivel} />
+      <FaixaOponentesMobile estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
       <IndicadorArgonautas estadoVisivel={estadoVisivel} />
       <AcordeaoSantuarios estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
 
@@ -75,6 +84,7 @@ export function TelaJogoMobile({
             estadoVisivel={estadoVisivel}
             jogadorFocoId={jogadorFocoId}
           />
+          <FeedDeEventos />
         </div>
       </main>
 
@@ -84,6 +94,10 @@ export function TelaJogoMobile({
       {estadoVisivel.subFase === 'ESCOLHENDO_SANTUARIO' && (
         <ModalEscolherSantuario estadoVisivel={estadoVisivel} />
       )}
+
+      <ChronosObtidoOverlay />
+      <SantuarioConquistadoOverlay />
+      <AnuncioSuaVez />
     </div>
   );
 }

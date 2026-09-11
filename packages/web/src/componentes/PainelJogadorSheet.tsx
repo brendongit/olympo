@@ -4,6 +4,7 @@
 // de qualquer ação continua vindo do motor (podePassar/podeReivindicar).
 
 import { useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podePassar, podeReivindicar, SANTUARIO_POR_ID } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
@@ -99,9 +100,13 @@ export function PainelJogadorSheet({
           ⧗{jogador.temChronos ? '✓' : '✗'}
         </span>
         {estadoVisivel.argonautas.dono === jogador.id && (
-          <span className="text-xs text-amber-400" title="Você está com Os Argonautas">
+          <motion.span
+            layoutId="argonautas-coroa"
+            className="text-xs text-amber-400"
+            title="Você está com Os Argonautas"
+          >
             👑
-          </span>
+          </motion.span>
         )}
         <span className="ml-auto text-lg font-bold text-amber-300">{jogador.kleos}★</span>
         <button
