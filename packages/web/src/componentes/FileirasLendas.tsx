@@ -1,23 +1,23 @@
 // Seção 7.3/7.4 — as 12 Lendas visíveis. Legalidade de cada botão vem
 // diretamente de podeReivindicar/podeReservar; o componente só monta a UI.
 
-import type { EstadoJogo } from '@olympos/motor';
+import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podeReivindicar, podeReservar } from '@olympos/motor';
 import { NOME_NIVEL } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
 import { CartaLenda } from './CartaLenda.js';
 
 function BotaoReservarBaralho({
-  estado,
+  estadoVisivel,
   nivel,
   jogadorId,
 }: {
-  estado: EstadoJogo;
+  estadoVisivel: EstadoVisivel;
   nivel: 1 | 2 | 3;
   jogadorId: string;
 }) {
   const despachar = usePartida((s) => s.despachar);
-  const pode = podeReservar(estado, jogadorId, { tipo: 'baralho', nivel });
+  const pode = podeReservar(estadoVisivel, jogadorId, { tipo: 'baralho', nivel });
 
   return (
     <button
@@ -38,9 +38,18 @@ function BotaoReservarBaralho({
 
 const NIVEIS_DE_CIMA_PARA_BAIXO = [3, 2, 1] as const;
 
-export function FileirasLendas({ estado }: { estado: EstadoJogo }) {
+export function FileirasLendas({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  /** De quem é a perspectiva de ação — default: quem tem a vez (hotseat local). Online: sempre "eu". */
+  jogadorFocoId?: string;
+}) {
   const despachar = usePartida((s) => s.despachar);
-  const jogadorDaVez = estado.jogadores[estado.jogadorAtual]!;
+  const jogadorFoco =
+    estadoVisivel.jogadores.find((j) => j.id === jogadorFocoId) ??
+    estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
 
   return (
     <div className="flex flex-1 flex-col justify-center gap-3 overflow-y-auto py-2">
@@ -49,12 +58,12 @@ export function FileirasLendas({ estado }: { estado: EstadoJogo }) {
           <div className="w-24 shrink-0 text-right text-[10px] uppercase tracking-wide text-stone-500">
             <div className="text-lg font-bold text-stone-400">{nivel}</div>
             {NOME_NIVEL[nivel]}
-            <div className="text-stone-600">{estado.baralhos[nivel].length} no baralho</div>
-            <BotaoReservarBaralho estado={estado} nivel={nivel} jogadorId={jogadorDaVez.id} />
+            <div className="text-stone-600">{estadoVisivel.baralhos[nivel]} no baralho</div>
+            <BotaoReservarBaralho estadoVisivel={estadoVisivel} nivel={nivel} jogadorId={jogadorFoco.id} />
           </div>
 
           <div className="flex flex-1 flex-wrap gap-2">
-            {estado.fileiras[nivel].map((cartaId, idx) => {
+            {estadoVisivel.fileiras[nivel].map((cartaId, idx) => {
               if (!cartaId) {
                 return (
                   <div
@@ -67,16 +76,16 @@ export function FileirasLendas({ estado }: { estado: EstadoJogo }) {
               }
 
               const lenda = LENDA_POR_ID[cartaId]!;
-              const pagamento = calcularPagamento(jogadorDaVez, lenda);
-              const podeR = podeReivindicar(estado, jogadorDaVez.id, cartaId, 'fileira');
-              const podeS = podeReservar(estado, jogadorDaVez.id, { tipo: 'fileira', cartaId });
+              const pagamento = calcularPagamento(jogadorFoco, lenda);
+              const podeR = podeReivindicar(estadoVisivel, jogadorFoco.id, cartaId, 'fileira');
+              const podeS = podeReservar(estadoVisivel, jogadorFoco.id, { tipo: 'fileira', cartaId });
 
               return (
                 <CartaLenda
                   key={cartaId}
                   lenda={lenda}
                   pagamento={pagamento}
-                  jogadorTemChronos={jogadorDaVez.temChronos}
+                  jogadorTemChronos={jogadorFoco.temChronos}
                   acoes={[
                     {
                       rotulo: 'Reivindicar',
@@ -86,7 +95,7 @@ export function FileirasLendas({ estado }: { estado: EstadoJogo }) {
                       aoClicar: () =>
                         despachar({
                           tipo: 'REIVINDICAR',
-                          jogadorId: jogadorDaVez.id,
+                          jogadorId: jogadorFoco.id,
                           cartaId,
                           origem: 'fileira',
                         }),
@@ -98,7 +107,7 @@ export function FileirasLendas({ estado }: { estado: EstadoJogo }) {
                       aoClicar: () =>
                         despachar({
                           tipo: 'RESERVAR',
-                          jogadorId: jogadorDaVez.id,
+                          jogadorId: jogadorFoco.id,
                           alvo: { tipo: 'fileira', cartaId },
                         }),
                     },

@@ -1,25 +1,29 @@
 // Seção 10 — Santuários. Só exibição: quem se qualifica é decidido pelo
 // motor dentro de finalizarTurno; aqui só lemos santuariosDisponiveis/domínios.
 
-import type { EstadoJogo } from '@olympos/motor';
+import type { EstadoVisivel } from '@olympos/motor';
 import { SANTUARIO_POR_ID } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
 
 export function PainelSantuarios({
-  estado,
+  estadoVisivel,
+  jogadorFocoId,
   mostrarTitulo = true,
 }: {
-  estado: EstadoJogo;
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
   mostrarTitulo?: boolean;
 }) {
-  const jogadorDaVez = estado.jogadores[estado.jogadorAtual]!;
+  const jogadorDaVez =
+    estadoVisivel.jogadores.find((j) => j.id === jogadorFocoId) ??
+    estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
 
   return (
     <div className="flex w-full flex-col gap-2 overflow-y-auto">
       {mostrarTitulo && (
         <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Santuários</h2>
       )}
-      {estado.santuariosDisponiveis.map((id) => {
+      {estadoVisivel.santuariosDisponiveis.map((id) => {
         const santuario = SANTUARIO_POR_ID[id]!;
         const requisitos = ORDEM_ESSENCIAS.filter((e) => santuario.requisito[e] > 0);
         const qualificado = requisitos.every((e) => jogadorDaVez.dominios[e] >= santuario.requisito[e]);
@@ -57,7 +61,7 @@ export function PainelSantuarios({
           </div>
         );
       })}
-      {estado.santuariosDisponiveis.length === 0 && (
+      {estadoVisivel.santuariosDisponiveis.length === 0 && (
         <p className="text-xs text-stone-500">Todos os Santuários já foram concedidos.</p>
       )}
     </div>

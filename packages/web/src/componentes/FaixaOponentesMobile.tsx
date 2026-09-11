@@ -54,6 +54,11 @@ export function FaixaOponentesMobile({ estadoVisivel }: { estadoVisivel: EstadoV
               </span>
             )}
             {!j.conectado && <span className="text-xs text-stone-600">(offline)</span>}
+            {j.turnosAusente >= 3 && (
+              <span className="text-xs text-amber-500" title={`${j.turnosAusente} turnos sem agir`}>
+                ⚠
+              </span>
+            )}
           </button>
         );
       })}

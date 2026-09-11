@@ -4,13 +4,13 @@
 // vindo só do motor (calcularPagamento/podeReivindicar/podeReservar); este
 // componente apenas formata o texto.
 
-import type { Bolsa, Jogador, Lenda } from '@olympos/motor';
+import type { Bolsa, JogadorOuVisivel, Lenda } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
 import type { AcaoCarta } from './CartaLenda.js';
 
 interface ModalFocoCartaProps {
   lenda: Lenda;
-  jogador: Jogador;
+  jogador: JogadorOuVisivel;
   pagamento: { possivel: boolean; pagamento: Bolsa };
   acoes: AcaoCarta[];
   reservaOculta?: boolean;

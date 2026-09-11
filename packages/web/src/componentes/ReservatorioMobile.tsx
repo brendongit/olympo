@@ -4,7 +4,7 @@
 // despachar, nunca SE é legal.
 
 import { useEffect, useRef, useState } from 'react';
-import type { Essencia, EstadoJogo } from '@olympos/motor';
+import type { Essencia, EstadoVisivel } from '@olympos/motor';
 import { podeColherIguais } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
@@ -13,12 +13,18 @@ const ATRASO_TOQUE_LONGO_MS = 300;
 const JANELA_DUPLO_TOQUE_MS = 350;
 const ATRASO_CONFIRMACAO_MS = 400;
 
-export function ReservatorioMobile({ estado }: { estado: EstadoJogo }) {
+export function ReservatorioMobile({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
   const despachar = usePartida((s) => s.despachar);
   const [selecionadas, setSelecionadas] = useState<Essencia[]>([]);
   const [confirmando, setConfirmando] = useState(false);
   const [avisoCadeado, setAvisoCadeado] = useState<string | null>(null);
-  const jogadorId = estado.jogadores[estado.jogadorAtual]!.id;
+  const jogadorId = jogadorFocoId ?? estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!.id;
 
   const toqueLongoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toqueLongoDisparouRef = useRef(false);
@@ -27,10 +33,10 @@ export function ReservatorioMobile({ estado }: { estado: EstadoJogo }) {
   const avisoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const disponiveis = (['eter', 'oceano', 'terra', 'chama', 'sombra'] as const).filter(
-    (e) => estado.reservatorio[e] > 0,
+    (e) => estadoVisivel.reservatorio[e] > 0,
   );
   const maximo = Math.min(3, disponiveis.length);
-  const emEscolhendoAcao = estado.subFase === 'ESCOLHENDO_ACAO';
+  const emEscolhendoAcao = estadoVisivel.subFase === 'ESCOLHENDO_ACAO';
 
   // Ao completar a seleção de 3 diferentes, confirma sozinho após 400ms —
   // com uma janela para desfazer, em vez de despachar na hora (Seção 17.6).
@@ -65,7 +71,7 @@ export function ReservatorioMobile({ estado }: { estado: EstadoJogo }) {
   }
 
   function tentarColherIguais(e: Essencia) {
-    const resultado = podeColherIguais(estado, jogadorId, e);
+    const resultado = podeColherIguais(estadoVisivel, jogadorId, e);
     if (resultado.ok) {
       despachar({ tipo: 'COLHER_IGUAIS', jogadorId, essencia: e });
       setSelecionadas([]);
@@ -77,7 +83,7 @@ export function ReservatorioMobile({ estado }: { estado: EstadoJogo }) {
   }
 
   function aoPressionar(e: Essencia) {
-    if (!emEscolhendoAcao || confirmando || estado.reservatorio[e] === 0) return;
+    if (!emEscolhendoAcao || confirmando || estadoVisivel.reservatorio[e] === 0) return;
     toqueLongoDisparouRef.current = false;
     toqueLongoRef.current = setTimeout(() => {
       toqueLongoDisparouRef.current = true;
@@ -91,7 +97,7 @@ export function ReservatorioMobile({ estado }: { estado: EstadoJogo }) {
       toqueLongoDisparouRef.current = false;
       return; // já disparou como toque longo — não trata como clique
     }
-    if (!emEscolhendoAcao || confirmando || estado.reservatorio[e] === 0) return;
+    if (!emEscolhendoAcao || confirmando || estadoVisivel.reservatorio[e] === 0) return;
 
     const agora = Date.now();
     const ultimo = ultimoToqueRef.current[e] ?? 0;
@@ -161,7 +167,7 @@ export function ReservatorioMobile({ estado }: { estado: EstadoJogo }) {
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
         {ORDEM_FICHAS.map((f) => {
           const info = INFO_FICHA[f];
-          const quantidade = estado.reservatorio[f];
+          const quantidade = estadoVisivel.reservatorio[f];
 
           // Ícor e Chronos são "fora do mercado" (Seção 3.1): blocos travados,
           // nunca respondem a toque (Seção 19.7).

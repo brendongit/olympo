@@ -6,7 +6,7 @@
 
 import { LENDA_POR_ID } from './dados/lendas.js';
 import { MAX_PRESSAGIOS, MIN_PARA_DUPLA } from './dados/config.js';
-import type { Acao, Bolsa, EstadoJogo, Essencia, Jogador, Lenda, Resultado } from './tipos.js';
+import type { Acao, Bolsa, EstadoOuVisivel, Essencia, JogadorOuVisivel, Lenda, Resultado } from './tipos.js';
 import { ESSENCIAS, FICHAS } from './tipos.js';
 import { NIVEIS, bolsaVazia, cartaEstaVisivel, ehVezDe, jogadorPorId, somaBolsa } from './util.js';
 
@@ -20,8 +20,13 @@ function erro(motivo: string): Resultado {
 
 export type AlvoReserva = Extract<Acao, { tipo: 'RESERVAR' }>['alvo'];
 
+/** `baralhos[n]` é o array real no servidor, ou só a contagem na projeção do cliente (Seção 18) — normaliza os dois. */
+function nCartasNoBaralho(baralho: string[] | number): number {
+  return typeof baralho === 'number' ? baralho : baralho.length;
+}
+
 // ─── Colher 3 diferentes ───
-export function podeColherDiferentes(e: EstadoJogo, jogadorId: string, essencias: Essencia[]): Resultado {
+export function podeColherDiferentes(e: EstadoOuVisivel, jogadorId: string, essencias: Essencia[]): Resultado {
   if (e.fase === 'ENCERRADO') return erro('A partida já terminou');
   if (!ehVezDe(e, jogadorId)) return erro('Não é seu turno');
   if (e.subFase !== 'ESCOLHENDO_ACAO') return erro('Resolva a etapa pendente');
@@ -46,7 +51,7 @@ export function podeColherDiferentes(e: EstadoJogo, jogadorId: string, essencias
 }
 
 // ─── Colher 2 iguais ───
-export function podeColherIguais(e: EstadoJogo, jogadorId: string, essencia: Essencia): Resultado {
+export function podeColherIguais(e: EstadoOuVisivel, jogadorId: string, essencia: Essencia): Resultado {
   if (e.fase === 'ENCERRADO') return erro('A partida já terminou');
   if (!ehVezDe(e, jogadorId)) return erro('Não é seu turno');
   if (e.subFase !== 'ESCOLHENDO_ACAO') return erro('Resolva a etapa pendente');
@@ -57,14 +62,14 @@ export function podeColherIguais(e: EstadoJogo, jogadorId: string, essencia: Ess
 }
 
 // ─── Reservar ───
-export function podeReservar(e: EstadoJogo, jogadorId: string, alvo: AlvoReserva): Resultado {
+export function podeReservar(e: EstadoOuVisivel, jogadorId: string, alvo: AlvoReserva): Resultado {
   if (e.fase === 'ENCERRADO') return erro('A partida já terminou');
   const j = jogadorPorId(e, jogadorId);
   if (!j) return erro('Jogador inválido');
   if (!ehVezDe(e, jogadorId)) return erro('Não é seu turno');
   if (e.subFase !== 'ESCOLHENDO_ACAO') return erro('Resolva a etapa pendente');
   if (j.pressagios.length >= MAX_PRESSAGIOS) return erro('Você já tem 3 presságios');
-  if (alvo.tipo === 'baralho' && e.baralhos[alvo.nivel].length === 0) return erro('Baralho vazio');
+  if (alvo.tipo === 'baralho' && nCartasNoBaralho(e.baralhos[alvo.nivel]) === 0) return erro('Baralho vazio');
   if (alvo.tipo === 'fileira' && !cartaEstaVisivel(e, alvo.cartaId)) return erro('Carta indisponível');
   return ok(); // NÃO checar ícor: reservar sem ícor é legal
 }
@@ -72,7 +77,7 @@ export function podeReservar(e: EstadoJogo, jogadorId: string, alvo: AlvoReserva
 // ─── Reivindicar ───
 // Seção 7.3: o desconto do Domínio é aplicado primeiro; a Essência de Chronos
 // nunca entra no pagamento (nem é oferecida, nem aparece na tela).
-export function calcularPagamento(j: Jogador, carta: Lenda): { possivel: boolean; pagamento: Bolsa } {
+export function calcularPagamento(j: JogadorOuVisivel, carta: Lenda): { possivel: boolean; pagamento: Bolsa } {
   const pagamento: Bolsa = bolsaVazia();
   let icorNecessario = 0;
 
@@ -88,7 +93,7 @@ export function calcularPagamento(j: Jogador, carta: Lenda): { possivel: boolean
 }
 
 export function podeReivindicar(
-  e: EstadoJogo,
+  e: EstadoOuVisivel,
   jogadorId: string,
   cartaId: string,
   origem: 'fileira' | 'pressagio',
@@ -113,7 +118,7 @@ export function podeReivindicar(
 }
 
 // ─── Devolver fichas ───
-export function podeDevolver(e: EstadoJogo, jogadorId: string, fichas: Partial<Bolsa>): Resultado {
+export function podeDevolver(e: EstadoOuVisivel, jogadorId: string, fichas: Partial<Bolsa>): Resultado {
   if (e.fase === 'ENCERRADO') return erro('A partida já terminou');
   if (e.subFase !== 'DESCARTANDO') return erro('Nada a devolver');
   if (!e.descartePendente || e.descartePendente.jogadorId !== jogadorId)
@@ -136,7 +141,7 @@ export function podeDevolver(e: EstadoJogo, jogadorId: string, fichas: Partial<B
 }
 
 // ─── Escolher Santuário ───
-export function podeEscolherSantuario(e: EstadoJogo, jogadorId: string, santuarioId: string): Resultado {
+export function podeEscolherSantuario(e: EstadoOuVisivel, jogadorId: string, santuarioId: string): Resultado {
   if (e.fase === 'ENCERRADO') return erro('A partida já terminou');
   if (e.subFase !== 'ESCOLHENDO_SANTUARIO') return erro('Nenhuma escolha de Santuário pendente');
   if (!e.escolhaSantuarioPendente || e.escolhaSantuarioPendente.jogadorId !== jogadorId)
@@ -146,7 +151,7 @@ export function podeEscolherSantuario(e: EstadoJogo, jogadorId: string, santuari
 }
 
 // ─── Passar (Seção 7.5) ───
-export function existeAcaoLegal(e: EstadoJogo, j: Jogador): boolean {
+export function existeAcaoLegal(e: EstadoOuVisivel, j: JogadorOuVisivel): boolean {
   // A: colher diferentes — legal assim que houver ao menos 1 tipo de essência
   // colorida disponível (o jogador pega `min(3, disponíveis)`).
   const tiposDisponiveis = ESSENCIAS.filter((x) => e.reservatorio[x] > 0);
@@ -157,14 +162,17 @@ export function existeAcaoLegal(e: EstadoJogo, j: Jogador): boolean {
 
   // D: reservar, mesmo sem ganhar Ícor.
   if (j.pressagios.length < MAX_PRESSAGIOS) {
-    const baralhoComCartas = NIVEIS.some((n) => e.baralhos[n].length > 0);
+    const baralhoComCartas = NIVEIS.some((n) => nCartasNoBaralho(e.baralhos[n]) > 0);
     const fileiraComCartas = NIVEIS.some((n) => e.fileiras[n].some((c) => c !== null));
     if (baralhoComCartas || fileiraComCartas) return true;
   }
 
   // C: reivindicar (fileira ou presságio).
   const idsFileira = NIVEIS.flatMap((n) => e.fileiras[n].filter((c): c is string => c !== null));
-  const idsPressagio = j.pressagios.map((p) => p.cartaId);
+  // p.cartaId só é null quando o presságio é oculto e alheio (Seção 18) —
+  // não pode acontecer aqui, já que `j` é sempre o próprio jogador sendo
+  // validado, mas o filtro mantém o tipo são pra EstadoVisivel também.
+  const idsPressagio = j.pressagios.map((p) => p.cartaId).filter((id): id is string => id !== null);
   for (const cid of [...idsFileira, ...idsPressagio]) {
     const carta = LENDA_POR_ID[cid];
     if (!carta) continue;
@@ -174,12 +182,18 @@ export function existeAcaoLegal(e: EstadoJogo, j: Jogador): boolean {
   return false;
 }
 
-export function podePassar(e: EstadoJogo, jogadorId: string): Resultado {
+export function podePassar(e: EstadoOuVisivel, jogadorId: string): Resultado {
   if (e.fase === 'ENCERRADO') return erro('A partida já terminou');
   const j = jogadorPorId(e, jogadorId);
   if (!j) return erro('Jogador inválido');
   if (!ehVezDe(e, jogadorId)) return erro('Não é seu turno');
   if (e.subFase !== 'ESCOLHENDO_ACAO') return erro('Resolva a etapa pendente');
   if (existeAcaoLegal(e, j)) return erro('Existe uma ação legal disponível');
+  return ok();
+}
+
+// ─── Encerrar por abandono (Seção 17.6 — votação de encerramento) ───
+export function podeEncerrarAbandono(e: EstadoOuVisivel): Resultado {
+  if (e.fase === 'ENCERRADO') return erro('A partida já terminou');
   return ok();
 }

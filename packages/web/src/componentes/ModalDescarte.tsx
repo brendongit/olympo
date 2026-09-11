@@ -3,19 +3,19 @@
 // por este componente — aqui só montamos a ação e checamos podeDevolver).
 
 import { useState } from 'react';
-import type { Bolsa, EstadoJogo } from '@olympos/motor';
+import type { Bolsa, EstadoVisivel } from '@olympos/motor';
 import { podeDevolver } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
 
-export function ModalDescarte({ estado }: { estado: EstadoJogo }) {
+export function ModalDescarte({ estadoVisivel }: { estadoVisivel: EstadoVisivel }) {
   const despachar = usePartida((s) => s.despachar);
-  const pendente = estado.descartePendente!;
-  const jogador = estado.jogadores.find((j) => j.id === pendente.jogadorId)!;
+  const pendente = estadoVisivel.descartePendente!;
+  const jogador = estadoVisivel.jogadores.find((j) => j.id === pendente.jogadorId)!;
   const [selecionadas, setSelecionadas] = useState<Partial<Bolsa>>({});
 
   const total = ORDEM_FICHAS.reduce((acc, f) => acc + (selecionadas[f] ?? 0), 0);
-  const resultado = podeDevolver(estado, jogador.id, selecionadas);
+  const resultado = podeDevolver(estadoVisivel, jogador.id, selecionadas);
 
   function ajustar(f: (typeof ORDEM_FICHAS)[number], delta: number) {
     setSelecionadas((atual) => {

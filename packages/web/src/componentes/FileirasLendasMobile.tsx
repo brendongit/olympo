@@ -5,7 +5,7 @@
 // botões de ação no card.
 
 import { useState } from 'react';
-import type { EstadoJogo } from '@olympos/motor';
+import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podeReivindicar, podeReservar } from '@olympos/motor';
 import { NOME_NIVEL } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
@@ -14,9 +14,17 @@ import { ModalFocoCarta } from './ModalFocoCarta.js';
 
 const NIVEIS_DE_CIMA_PARA_BAIXO = [3, 2, 1] as const;
 
-export function FileirasLendasMobile({ estado }: { estado: EstadoJogo }) {
+export function FileirasLendasMobile({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
   const despachar = usePartida((s) => s.despachar);
-  const jogadorDaVez = estado.jogadores[estado.jogadorAtual]!;
+  const jogadorDaVez =
+    estadoVisivel.jogadores.find((j) => j.id === jogadorFocoId) ??
+    estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
   const [cartaFocada, setCartaFocada] = useState<string | null>(null);
 
   const lendaFocada = cartaFocada ? LENDA_POR_ID[cartaFocada] : null;
@@ -24,12 +32,12 @@ export function FileirasLendasMobile({ estado }: { estado: EstadoJogo }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto py-2">
       {NIVEIS_DE_CIMA_PARA_BAIXO.map((nivel) => {
-        const pode = podeReservar(estado, jogadorDaVez.id, { tipo: 'baralho', nivel });
+        const pode = podeReservar(estadoVisivel, jogadorDaVez.id, { tipo: 'baralho', nivel });
         return (
           <div key={nivel} className="flex items-stretch gap-2">
             <div className="flex w-14 shrink-0 flex-col items-center justify-center rounded-lg border border-stone-800 bg-stone-900/60 py-1 text-center text-[10px] uppercase tracking-wide text-stone-500">
               <div className="text-lg font-bold text-stone-300">{nivel}</div>
-              <div className="text-stone-600">{estado.baralhos[nivel].length} no baralho</div>
+              <div className="text-stone-600">{estadoVisivel.baralhos[nivel]} no baralho</div>
               <button
                 type="button"
                 disabled={!pode.ok}
@@ -51,7 +59,7 @@ export function FileirasLendasMobile({ estado }: { estado: EstadoJogo }) {
               className="flex flex-1 snap-x snap-mandatory gap-2 overflow-x-auto scroll-px-2 px-1 pb-1"
               aria-label={`Fileira de ${NOME_NIVEL[nivel]}, role para o lado para ver as 4 cartas`}
             >
-              {estado.fileiras[nivel].map((cartaId, idx) => {
+              {estadoVisivel.fileiras[nivel].map((cartaId, idx) => {
                 if (!cartaId) {
                   return (
                     <div
@@ -98,9 +106,9 @@ export function FileirasLendasMobile({ estado }: { estado: EstadoJogo }) {
             {
               rotulo: 'Reivindicar',
               destaque: true,
-              habilitado: podeReivindicar(estado, jogadorDaVez.id, lendaFocada.id, 'fileira').ok,
+              habilitado: podeReivindicar(estadoVisivel, jogadorDaVez.id, lendaFocada.id, 'fileira').ok,
               motivo: (() => {
-                const r = podeReivindicar(estado, jogadorDaVez.id, lendaFocada.id, 'fileira');
+                const r = podeReivindicar(estadoVisivel, jogadorDaVez.id, lendaFocada.id, 'fileira');
                 return r.ok ? undefined : r.motivo;
               })(),
               aoClicar: () => {
@@ -115,9 +123,9 @@ export function FileirasLendasMobile({ estado }: { estado: EstadoJogo }) {
             },
             {
               rotulo: 'Reservar',
-              habilitado: podeReservar(estado, jogadorDaVez.id, { tipo: 'fileira', cartaId: lendaFocada.id }).ok,
+              habilitado: podeReservar(estadoVisivel, jogadorDaVez.id, { tipo: 'fileira', cartaId: lendaFocada.id }).ok,
               motivo: (() => {
-                const r = podeReservar(estado, jogadorDaVez.id, { tipo: 'fileira', cartaId: lendaFocada.id });
+                const r = podeReservar(estadoVisivel, jogadorDaVez.id, { tipo: 'fileira', cartaId: lendaFocada.id });
                 return r.ok ? undefined : r.motivo;
               })(),
               aoClicar: () => {

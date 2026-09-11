@@ -1,17 +1,28 @@
-// Painel fixo do jogador da vez (Seção 17.3/17.8). Presságios próprios são
-// sempre visíveis para o dono — não precisa de projeção aqui.
+// Painel fixo do jogador em foco (Seção 17.3/17.8). Em hotseat local, é
+// sempre quem tem a vez (o dispositivo passa de mão em mão); online, é
+// sempre "eu" — por isso `jogadorFocoId` é explícito e nunca assume
+// jogadorAtual sozinho. Presságios do dono do painel nunca vêm redigidos
+// pela projeção (Seção 18), então `cartaId` é sempre real aqui.
 
-import type { EstadoJogo } from '@olympos/motor';
+import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podePassar, podeReivindicar } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
 import { CartaLenda } from './CartaLenda.js';
 
-export function PainelJogador({ estado }: { estado: EstadoJogo }) {
+export function PainelJogador({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
   const despachar = usePartida((s) => s.despachar);
-  const jogador = estado.jogadores[estado.jogadorAtual]!;
+  const jogador =
+    estadoVisivel.jogadores.find((j) => j.id === jogadorFocoId) ??
+    estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
   const totalFichas = ORDEM_FICHAS.reduce((acc, f) => acc + jogador.fichas[f], 0);
-  const podeP = podePassar(estado, jogador.id);
+  const podeP = podePassar(estadoVisivel, jogador.id);
 
   return (
     <div className="flex flex-col gap-3 border-t border-stone-800 bg-stone-900 p-3 md:flex-row md:items-start md:justify-between">
@@ -19,7 +30,7 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
         <div className="mb-1 flex items-center gap-2">
           <span className="text-2xl">{jogador.avatar}</span>
           <span className="font-serif text-xl font-bold text-amber-200">{jogador.nome}</span>
-          <span className="text-sm text-stone-400">· Turno {estado.numeroDoTurno + 1}</span>
+          <span className="text-sm text-stone-400">· Turno {estadoVisivel.numeroDoTurno + 1}</span>
           <span className="text-xs text-stone-400" title={`${jogador.simbolosArgo} símbolo(s) do Argo`}>
             ⛵{jogador.simbolosArgo}
           </span>
@@ -29,7 +40,7 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
           >
             ⧗{jogador.temChronos ? '✓' : '✗'}
           </span>
-          {estado.argonautas.dono === jogador.id && (
+          {estadoVisivel.argonautas.dono === jogador.id && (
             <span className="text-xs text-amber-400" title="Você está com Os Argonautas">
               👑
             </span>
@@ -62,7 +73,7 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="text-xs uppercase tracking-wide text-stone-500">Domínios</span>
           {ORDEM_ESSENCIAS.map((e) => {
             const info = INFO_FICHA[e];
@@ -78,6 +89,29 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
             );
           })}
         </div>
+
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="text-xs uppercase tracking-wide text-stone-500">
+            Lendas ({jogador.lendas.length})
+          </span>
+          {jogador.lendas.length === 0 && <span className="text-xs text-stone-600">nenhuma ainda</span>}
+          <div className="flex max-h-14 flex-wrap gap-1 overflow-y-auto">
+            {jogador.lendas.map((id) => {
+              const lenda = LENDA_POR_ID[id];
+              if (!lenda) return null;
+              const info = INFO_FICHA[lenda.dominio];
+              return (
+                <span
+                  key={id}
+                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${info.corFundo} ${info.corTexto}`}
+                  title={lenda.nome}
+                >
+                  {info.icone} {lenda.nome}
+                </span>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -86,12 +120,16 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
         </span>
         <div className="flex gap-2">
           {jogador.pressagios.map((p) => {
-            const lenda = LENDA_POR_ID[p.cartaId]!;
+            // `p.cartaId` nunca é null aqui: esta é sempre a projeção do
+            // próprio dono do painel, e presságios próprios nunca são
+            // redigidos (Seção 18).
+            const cartaId = p.cartaId!;
+            const lenda = LENDA_POR_ID[cartaId]!;
             const pagamento = calcularPagamento(jogador, lenda);
-            const podeR = podeReivindicar(estado, jogador.id, p.cartaId, 'pressagio');
+            const podeR = podeReivindicar(estadoVisivel, jogador.id, cartaId, 'pressagio');
             return (
               <CartaLenda
-                key={p.cartaId}
+                key={cartaId}
                 lenda={lenda}
                 pagamento={pagamento}
                 reservaOculta={p.oculto}
@@ -106,7 +144,7 @@ export function PainelJogador({ estado }: { estado: EstadoJogo }) {
                       despachar({
                         tipo: 'REIVINDICAR',
                         jogadorId: jogador.id,
-                        cartaId: p.cartaId,
+                        cartaId,
                         origem: 'pressagio',
                       }),
                   },

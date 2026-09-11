@@ -36,6 +36,7 @@ import {
   podeColherDiferentes,
   podeColherIguais,
   podeDevolver,
+  podeEncerrarAbandono,
   podeEscolherSantuario,
   podePassar,
   podeReivindicar,
@@ -152,6 +153,7 @@ export function criarPartida(config: ConfigPartida): EstadoJogo {
     argonautas: { dono: null },
     disparouUltimaRodada: null,
     vencedores: [],
+    encerradaPorAbandono: false,
     descartePendente: null,
     escolhaSantuarioPendente: null,
     historico: [],
@@ -178,6 +180,8 @@ export function reduzir(estado: EstadoJogo, acao: Acao): ResultadoAcao {
       return resolverEscolherSantuario(estado, acao.jogadorId, acao.santuarioId);
     case 'PASSAR':
       return resolverPassar(estado, acao.jogadorId);
+    case 'ENCERRAR_ABANDONO':
+      return resolverEncerrarAbandono(estado, acao.jogadorId);
   }
 }
 
@@ -453,6 +457,21 @@ function resolverPassar(e: EstadoJogo, jogadorId: string): ResultadoAcao {
 
   const novo = registrar(e, { t: 'PASSOU', jogadorId, motivo: 'Nenhuma ação legal disponível' });
   return { ok: true, valor: finalizarTurno(novo) };
+}
+
+// ─── Encerrar por abandono (Seção 17.6) ───
+// Não é fim de turno normal — não passa por finalizarTurno. Termina a
+// partida direto, sem vencedores: declarar alguém vencedor por votação
+// violaria a Seção 5 (vitória exige as 3 condições do Keraunos).
+function resolverEncerrarAbandono(e: EstadoJogo, jogadorId: string): ResultadoAcao {
+  const v = podeEncerrarAbandono(e);
+  if (!v.ok) return v;
+
+  const novo = registrar(e, { t: 'ENCERRADA_POR_ABANDONO', jogadorId });
+  return {
+    ok: true,
+    valor: { ...novo, fase: 'ENCERRADO', vencedores: [], encerradaPorAbandono: true, prazoDoTurno: null },
+  };
 }
 
 // ─────────────────────── Pipeline de fim de turno (Seção 16.3) ───────────────────────

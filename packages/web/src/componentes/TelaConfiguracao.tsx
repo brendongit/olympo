@@ -3,8 +3,8 @@ import { usePartida } from '../loja/usePartida.js';
 
 const NOMES_PADRAO = ['Helena', 'Rafael', 'Ariadne', 'Teseu'];
 
-export function TelaConfiguracao() {
-  const iniciarPartida = usePartida((s) => s.iniciarPartida);
+export function TelaConfiguracao({ aoVoltar }: { aoVoltar: () => void }) {
+  const iniciarPartidaLocal = usePartida((s) => s.iniciarPartidaLocal);
   const [numeroJogadores, setNumeroJogadores] = useState(2);
   const [nomes, setNomes] = useState<string[]>(NOMES_PADRAO.slice(0, 2));
 
@@ -19,12 +19,19 @@ export function TelaConfiguracao() {
 
   function comecar() {
     const nomesValidos = nomes.map((n, i) => (n.trim() ? n.trim() : `Jogador ${i + 1}`));
-    iniciarPartida(nomesValidos);
+    iniciarPartidaLocal(nomesValidos);
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-stone-950 p-6">
       <div className="w-full max-w-md rounded-xl border border-stone-800 bg-stone-900 p-8 shadow-xl">
+        <button
+          type="button"
+          onClick={aoVoltar}
+          className="mb-4 text-sm text-stone-500 hover:text-stone-300"
+        >
+          ← voltar
+        </button>
         <h1 className="mb-1 text-center text-3xl font-serif font-bold tracking-wide text-amber-200">OLYMPOS</h1>
         <p className="mb-6 text-center text-sm text-stone-400">Modo local — todos os jogadores na mesma tela</p>
 

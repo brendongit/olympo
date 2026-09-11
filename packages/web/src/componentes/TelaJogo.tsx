@@ -2,9 +2,9 @@
 // | ARGONAUTAS+OPONENTES, com o painel do jogador da vez fixo embaixo e a
 // barra compacta do Keraunos sempre visível no cabeçalho (Seção 19.5).
 
-import type { EstadoJogo } from '@olympos/motor';
+import type { EstadoVisivel } from '@olympos/motor';
 import { useEhMobile } from '../lib/useMediaQuery.js';
-import { useEstadoVisivel } from '../loja/usePartida.js';
+import { ContadorDeTurno } from './ContadorDeTurno.js';
 import { BarraKeraunosCompacta, PainelKeraunos } from './PainelKeraunos.js';
 import { FileirasLendas } from './FileirasLendas.js';
 import { IndicadorArgonautas } from './IndicadorArgonautas.js';
@@ -13,24 +13,30 @@ import { ModalEscolherSantuario } from './ModalEscolherSantuario.js';
 import { PainelJogador } from './PainelJogador.js';
 import { PainelOponentes } from './PainelOponentes.js';
 import { PainelSantuarios } from './PainelSantuarios.js';
+import { PainelVotacaoEncerrar } from './PainelVotacaoEncerrar.js';
 import { Reservatorio } from './Reservatorio.js';
 import { TelaFimDeJogo } from './TelaFimDeJogo.js';
 import { TelaJogoMobile } from './TelaJogoMobile.js';
 
-export function TelaJogo({ estado }: { estado: EstadoJogo }) {
-  const estadoVisivel = useEstadoVisivel();
+export function TelaJogo({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  /** Quem tem o painel de ação — default: quem tem a vez (hotseat local). Online: sempre "eu". */
+  jogadorFocoId?: string;
+}) {
   const ehMobile = useEhMobile();
 
-  if (estado.fase === 'ENCERRADO') {
-    return <TelaFimDeJogo estado={estado} />;
+  if (estadoVisivel.fase === 'ENCERRADO') {
+    return <TelaFimDeJogo estadoVisivel={estadoVisivel} />;
   }
-  if (!estadoVisivel) return null;
 
   if (ehMobile) {
-    return <TelaJogoMobile estado={estado} />;
+    return <TelaJogoMobile estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />;
   }
 
-  const jogadorDaVez = estado.jogadores[estado.jogadorAtual]!;
+  const jogadorDaVez = estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
 
   return (
     <div className="flex h-screen flex-col bg-stone-950 text-stone-100">
@@ -40,38 +46,43 @@ export function TelaJogo({ estado }: { estado: EstadoJogo }) {
         <span className="text-sm text-stone-300">
           Vez de <span className="font-semibold text-amber-300">{jogadorDaVez.nome}</span>
         </span>
-        <div className="ml-auto">
-          <BarraKeraunosCompacta estado={estado} />
+        <div className="ml-auto flex items-center gap-2">
+          <PainelVotacaoEncerrar estadoVisivel={estadoVisivel} />
+          <ContadorDeTurno estadoVisivel={estadoVisivel} />
+          <BarraKeraunosCompacta estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
         </div>
-        {estado.fase === 'ULTIMA_RODADA' && (
+        {estadoVisivel.fase === 'ULTIMA_RODADA' && (
           <span className="rounded bg-red-800 px-2 py-0.5 text-xs font-semibold text-red-100" aria-live="assertive">
             Última rodada —{' '}
-            {estado.jogadores.find((j) => j.id === estado.disparouUltimaRodada)?.nome} forjou o Keraunos
+            {estadoVisivel.jogadores.find((j) => j.id === estadoVisivel.disparouUltimaRodada)?.nome} forjou o
+            Keraunos
           </span>
         )}
       </header>
 
       <div className="grid flex-1 grid-cols-[240px_1fr_260px] overflow-hidden">
         <aside className="flex flex-col gap-3 overflow-y-auto border-r border-stone-800 p-3">
-          <PainelKeraunos estado={estado} />
-          <PainelSantuarios estado={estado} />
+          <PainelKeraunos estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
+          <PainelSantuarios estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
         </aside>
 
         <main className="flex flex-col overflow-hidden p-3">
-          <FileirasLendas estado={estado} />
-          <Reservatorio key={estado.numeroDoTurno} estado={estado} />
+          <FileirasLendas estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
+          <Reservatorio key={estadoVisivel.numeroDoTurno} estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
         </main>
 
         <aside className="flex flex-col gap-3 overflow-y-auto border-l border-stone-800 p-3">
-          <IndicadorArgonautas estado={estado} />
+          <IndicadorArgonautas estadoVisivel={estadoVisivel} />
           <PainelOponentes estadoVisivel={estadoVisivel} />
         </aside>
       </div>
 
-      <PainelJogador estado={estado} />
+      <PainelJogador estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
 
-      {estado.subFase === 'DESCARTANDO' && <ModalDescarte estado={estado} />}
-      {estado.subFase === 'ESCOLHENDO_SANTUARIO' && <ModalEscolherSantuario estado={estado} />}
+      {estadoVisivel.subFase === 'DESCARTANDO' && <ModalDescarte estadoVisivel={estadoVisivel} />}
+      {estadoVisivel.subFase === 'ESCOLHENDO_SANTUARIO' && (
+        <ModalEscolherSantuario estadoVisivel={estadoVisivel} />
+      )}
     </div>
   );
 }

@@ -1,15 +1,15 @@
 // Seção 10 / 17.6 — sub-fase ESCOLHENDO_SANTUARIO: 2+ Santuários elegíveis
 // no mesmo turno. Um toque escolhe; o motor decide o resto.
 
-import type { EstadoJogo } from '@olympos/motor';
+import type { EstadoVisivel } from '@olympos/motor';
 import { podeEscolherSantuario, SANTUARIO_POR_ID } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
 
-export function ModalEscolherSantuario({ estado }: { estado: EstadoJogo }) {
+export function ModalEscolherSantuario({ estadoVisivel }: { estadoVisivel: EstadoVisivel }) {
   const despachar = usePartida((s) => s.despachar);
-  const pendente = estado.escolhaSantuarioPendente!;
-  const jogador = estado.jogadores.find((j) => j.id === pendente.jogadorId)!;
+  const pendente = estadoVisivel.escolhaSantuarioPendente!;
+  const jogador = estadoVisivel.jogadores.find((j) => j.id === pendente.jogadorId)!;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -23,7 +23,7 @@ export function ModalEscolherSantuario({ estado }: { estado: EstadoJogo }) {
         <div className="flex flex-wrap gap-3">
           {pendente.opcoes.map((santuarioId) => {
             const santuario = SANTUARIO_POR_ID[santuarioId]!;
-            const pode = podeEscolherSantuario(estado, jogador.id, santuarioId);
+            const pode = podeEscolherSantuario(estadoVisivel, jogador.id, santuarioId);
             return (
               <button
                 key={santuarioId}

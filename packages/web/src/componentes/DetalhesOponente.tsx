@@ -25,6 +25,11 @@ export function DetalhesOponente({
           <span>{j.avatar}</span>
           {j.nome}
           {!j.conectado && <span className="text-stone-600">(offline)</span>}
+          {j.turnosAusente >= 3 && (
+            <span className="text-xs text-amber-500" title={`${j.turnosAusente} turnos sem agir`}>
+              ⚠ ausente
+            </span>
+          )}
           {donoArgonautasId === j.id && (
             <span className="text-xs text-amber-400" title="Está com Os Argonautas">
               ⛵👑

@@ -4,7 +4,7 @@
 // de qualquer ação continua vindo do motor (podePassar/podeReivindicar).
 
 import { useRef, useState } from 'react';
-import type { EstadoJogo } from '@olympos/motor';
+import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podePassar, podeReivindicar, SANTUARIO_POR_ID } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
@@ -13,10 +13,18 @@ import { ModalFocoCarta } from './ModalFocoCarta.js';
 const ALTURA_RECOLHIDA = 168;
 const ALTURA_EXPANDIDA_VH = 0.7;
 
-export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
+export function PainelJogadorSheet({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
   const despachar = usePartida((s) => s.despachar);
-  const jogador = estado.jogadores[estado.jogadorAtual]!;
-  const podeP = podePassar(estado, jogador.id);
+  const jogador =
+    estadoVisivel.jogadores.find((j) => j.id === jogadorFocoId) ??
+    estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
+  const podeP = podePassar(estadoVisivel, jogador.id);
   const totalFichas = ORDEM_FICHAS.reduce((acc, f) => acc + jogador.fichas[f], 0);
 
   const [expandido, setExpandido] = useState(false);
@@ -80,7 +88,7 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
       <div className="flex shrink-0 items-center gap-2 px-3 pb-1">
         <span className="text-xl">{jogador.avatar}</span>
         <span className="font-serif text-lg font-bold text-amber-200">{jogador.nome}</span>
-        <span className="text-xs text-stone-500">T{estado.numeroDoTurno + 1}</span>
+        <span className="text-xs text-stone-500">T{estadoVisivel.numeroDoTurno + 1}</span>
         <span className="text-xs text-stone-400" title={`${jogador.simbolosArgo} símbolo(s) do Argo`}>
           ⛵{jogador.simbolosArgo}
         </span>
@@ -90,7 +98,7 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
         >
           ⧗{jogador.temChronos ? '✓' : '✗'}
         </span>
-        {estado.argonautas.dono === jogador.id && (
+        {estadoVisivel.argonautas.dono === jogador.id && (
           <span className="text-xs text-amber-400" title="Você está com Os Argonautas">
             👑
           </span>
@@ -132,17 +140,22 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
         <span className="ml-2 flex items-center gap-1 text-xs text-stone-500">
           Presságios
           {jogador.pressagios.length === 0 && <span className="text-stone-700">nenhum</span>}
-          {jogador.pressagios.map((p) => (
-            <button
-              key={p.cartaId}
-              type="button"
-              onClick={() => setPresagioFocado(p.cartaId)}
-              className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded border border-stone-700 bg-stone-800 text-sm"
-              title={LENDA_POR_ID[p.cartaId]?.nome}
-            >
-              🂠
-            </button>
-          ))}
+          {jogador.pressagios.map((p) => {
+            // Nunca null aqui: são os presságios do próprio dono do painel,
+            // que nunca vêm redigidos pela projeção (Seção 18).
+            const cartaId = p.cartaId!;
+            return (
+              <button
+                key={cartaId}
+                type="button"
+                onClick={() => setPresagioFocado(cartaId)}
+                className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded border border-stone-700 bg-stone-800 text-sm"
+                title={LENDA_POR_ID[cartaId]?.nome}
+              >
+                🂠
+              </button>
+            );
+          })}
         </span>
       </div>
 
@@ -189,7 +202,7 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
             Progresso dos Santuários
           </h3>
           <div className="flex flex-col gap-1">
-            {estado.santuariosDisponiveis.map((id) => {
+            {estadoVisivel.santuariosDisponiveis.map((id) => {
               const santuario = SANTUARIO_POR_ID[id]!;
               const requisitos = ORDEM_ESSENCIAS.filter((e) => santuario.requisito[e] > 0);
               const qualificado = requisitos.every((e) => jogador.dominios[e] >= santuario.requisito[e]);
@@ -212,7 +225,7 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
                 </div>
               );
             })}
-            {estado.santuariosDisponiveis.length === 0 && (
+            {estadoVisivel.santuariosDisponiveis.length === 0 && (
               <p className="text-xs text-stone-600">Todos os Santuários já foram concedidos.</p>
             )}
           </div>
@@ -230,9 +243,9 @@ export function PainelJogadorSheet({ estado }: { estado: EstadoJogo }) {
             {
               rotulo: 'Reivindicar',
               destaque: true,
-              habilitado: podeReivindicar(estado, jogador.id, lendaFocada.id, 'pressagio').ok,
+              habilitado: podeReivindicar(estadoVisivel, jogador.id, lendaFocada.id, 'pressagio').ok,
               motivo: (() => {
-                const r = podeReivindicar(estado, jogador.id, lendaFocada.id, 'pressagio');
+                const r = podeReivindicar(estadoVisivel, jogador.id, lendaFocada.id, 'pressagio');
                 return r.ok ? undefined : r.motivo;
               })(),
               aoClicar: () => {

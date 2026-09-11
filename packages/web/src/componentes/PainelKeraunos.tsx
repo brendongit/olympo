@@ -4,7 +4,7 @@
 // Os três requisitos (Seção 5) são só leitura de campos já públicos
 // (kleos, dominios, temChronos) — nenhuma regra é decidida aqui.
 
-import type { Essencia, EstadoJogo, Jogador } from '@olympos/motor';
+import type { Essencia, EstadoVisivel, Jogador } from '@olympos/motor';
 import { KLEOS_KERAUNOS } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
 
@@ -36,8 +36,16 @@ function Estado({ ok, parcial }: { ok: boolean; parcial?: boolean }) {
 }
 
 /** Versão de uma linha para a barra fixa do mobile (Seção 19.4). */
-export function BarraKeraunosCompacta({ estado }: { estado: EstadoJogo }) {
-  const jogador = estado.jogadores[estado.jogadorAtual]!;
+export function BarraKeraunosCompacta({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
+  const jogador =
+    estadoVisivel.jogadores.find((j) => j.id === jogadorFocoId) ??
+    estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
   const p = calcularProgresso(jogador);
   const dominiosOk = p.dominiosFaltando.length === 0;
 
@@ -63,11 +71,19 @@ export function BarraKeraunosCompacta({ estado }: { estado: EstadoJogo }) {
   );
 }
 
-export function PainelKeraunos({ estado }: { estado: EstadoJogo }) {
-  const jogador = estado.jogadores[estado.jogadorAtual]!;
+export function PainelKeraunos({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
+  const jogador =
+    estadoVisivel.jogadores.find((j) => j.id === jogadorFocoId) ??
+    estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
   const progresso = calcularProgresso(jogador);
   const dominiosOk = progresso.dominiosFaltando.length === 0;
-  const outros = estado.jogadores.filter((j) => j.id !== jogador.id);
+  const outros = estadoVisivel.jogadores.filter((j) => j.id !== jogador.id);
 
   return (
     <div

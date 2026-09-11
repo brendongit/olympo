@@ -3,18 +3,24 @@
 // numa seleção e despacha quando ela fica completa.
 
 import { useEffect, useState } from 'react';
-import type { Essencia, EstadoJogo } from '@olympos/motor';
-import { podeColherDiferentes, podeColherIguais } from '@olympos/motor';
+import type { Essencia, EstadoVisivel } from '@olympos/motor';
+import { podeColherIguais } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
 
-export function Reservatorio({ estado }: { estado: EstadoJogo }) {
+export function Reservatorio({
+  estadoVisivel,
+  jogadorFocoId,
+}: {
+  estadoVisivel: EstadoVisivel;
+  jogadorFocoId?: string;
+}) {
   const despachar = usePartida((s) => s.despachar);
   const [selecionadas, setSelecionadas] = useState<Essencia[]>([]);
-  const jogadorId = estado.jogadores[estado.jogadorAtual]!.id;
+  const jogadorId = jogadorFocoId ?? estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!.id;
 
   const disponiveis = (['eter', 'oceano', 'terra', 'chama', 'sombra'] as const).filter(
-    (e) => estado.reservatorio[e] > 0,
+    (e) => estadoVisivel.reservatorio[e] > 0,
   );
   const maximo = Math.min(3, disponiveis.length);
 
@@ -25,7 +31,7 @@ export function Reservatorio({ estado }: { estado: EstadoJogo }) {
     }
   }, [selecionadas, maximo, jogadorId, despachar]);
 
-  const emEscolhendoAcao = estado.subFase === 'ESCOLHENDO_ACAO';
+  const emEscolhendoAcao = estadoVisivel.subFase === 'ESCOLHENDO_ACAO';
 
   function alternar(e: Essencia) {
     if (!emEscolhendoAcao) return;
@@ -54,7 +60,7 @@ export function Reservatorio({ estado }: { estado: EstadoJogo }) {
       <div className="flex flex-wrap gap-2">
         {ORDEM_FICHAS.map((f) => {
           const info = INFO_FICHA[f];
-          const quantidade = estado.reservatorio[f];
+          const quantidade = estadoVisivel.reservatorio[f];
 
           // Ícor e Chronos são "fora do mercado" (Seção 3.1): nunca clicáveis
           // para colheita, sempre exibidos como blocos travados, separados
@@ -85,7 +91,7 @@ export function Reservatorio({ estado }: { estado: EstadoJogo }) {
           const podeSelecionar =
             emEscolhendoAcao && quantidade > 0 && (selecionada || selecionadas.length < maximo);
 
-          const iguais = podeColherIguais(estado, jogadorId, essencia);
+          const iguais = podeColherIguais(estadoVisivel, jogadorId, essencia);
 
           return (
             <div key={f} className="flex flex-col items-center gap-1">

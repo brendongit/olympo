@@ -99,6 +99,8 @@ export interface EstadoJogo {
   // controle de fim de jogo
   disparouUltimaRodada: string | null; // id do jogador que cumpriu o Keraunos
   vencedores: string[]; // preenchido em ENCERRADO
+  /** true só quando ENCERRADO veio de ENCERRAR_ABANDONO — sem vencedores (Seção 17.6). */
+  encerradaPorAbandono: boolean;
 
   // sub-fases pendentes
   descartePendente: { jogadorId: string; excedente: number } | null;
@@ -121,6 +123,12 @@ export type EstadoVisivel = Omit<EstadoJogo, 'seed' | 'baralhos' | 'jogadores'> 
   jogadores: JogadorVisivel[];
 };
 
+// Seção 16.1: "A UI usa exatamente estas funções [podeX] para desabilitar
+// botões antes do clique" — vale tanto no servidor (EstadoJogo bruto) quanto
+// no cliente (EstadoVisivel, via projetarPara). `validar.ts` aceita os dois.
+export type EstadoOuVisivel = EstadoJogo | EstadoVisivel;
+export type JogadorOuVisivel = Jogador | JogadorVisivel;
+
 // Seção 15.3 — Tipos de ação
 
 export type Acao =
@@ -134,7 +142,8 @@ export type Acao =
     }
   | { tipo: 'DEVOLVER_FICHAS'; jogadorId: string; fichas: Partial<Bolsa> }
   | { tipo: 'ESCOLHER_SANTUARIO'; jogadorId: string; santuarioId: string }
-  | { tipo: 'PASSAR'; jogadorId: string }; // só quando não há ação legal
+  | { tipo: 'PASSAR'; jogadorId: string } // só quando não há ação legal
+  | { tipo: 'ENCERRAR_ABANDONO'; jogadorId: string }; // Seção 17.6 — votação de encerramento por abandono
 
 // Seção 17.5 — Eventos de jogo (para animação e feed)
 
@@ -164,7 +173,8 @@ export type EventoJogo =
   | { t: 'PASSOU'; jogadorId: string; motivo: string }
   | { t: 'ULTIMA_RODADA'; jogadorId: string }
   | { t: 'GATILHO_DESFEITO' }
-  | { t: 'FIM'; vencedores: string[] };
+  | { t: 'FIM'; vencedores: string[] }
+  | { t: 'ENCERRADA_POR_ABANDONO'; jogadorId: string };
 
 // Resultado de validação (Seção 16.1)
 
