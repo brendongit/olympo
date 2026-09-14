@@ -1,12 +1,15 @@
 // Seção 7.3/7.4 — as 12 Lendas visíveis. Legalidade de cada botão vem
 // diretamente de podeReivindicar/podeReservar; o componente só monta a UI.
 
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { EstadoVisivel, JogadorOuVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podeReivindicar, podeReservar } from '@olympos/motor';
 import { NOME_NIVEL } from '../lib/tema.js';
 import { useNavegacaoPorSetas } from '../lib/useNavegacaoPorSetas.js';
 import { usePartida } from '../loja/usePartida.js';
 import { CartaLenda } from './CartaLenda.js';
+import { ModalFocoCarta } from './ModalFocoCarta.js';
 
 function BotaoReservarBaralho({
   estadoVisivel,
@@ -41,10 +44,12 @@ function FileiraDeNivel({
   estadoVisivel,
   nivel,
   jogadorFoco,
+  aoAbrirFoco,
 }: {
   estadoVisivel: EstadoVisivel;
   nivel: 1 | 2 | 3;
   jogadorFoco: JogadorOuVisivel;
+  aoAbrirFoco: (cartaId: string) => void;
 }) {
   const despachar = usePartida((s) => s.despachar);
   const { containerRef, aoTeclar } = useNavegacaoPorSetas<HTMLDivElement>();
@@ -63,60 +68,71 @@ function FileiraDeNivel({
         onKeyDown={aoTeclar}
         role="group"
         aria-label={`Fileira de ${NOME_NIVEL[nivel]}`}
+        style={{ perspective: 1000 }}
         className="flex flex-1 flex-wrap gap-2"
       >
-        {estadoVisivel.fileiras[nivel].map((cartaId, idx) => {
-          if (!cartaId) {
+        <AnimatePresence mode="popLayout">
+          {estadoVisivel.fileiras[nivel].map((cartaId, idx) => {
+            if (!cartaId) {
+              return (
+                <div
+                  key={`vazio-${idx}`}
+                  className="flex h-40 w-36 items-center justify-center rounded-lg border-2 border-dashed border-stone-800 text-xs text-stone-700"
+                >
+                  espaço vazio
+                </div>
+              );
+            }
+
+            const lenda = LENDA_POR_ID[cartaId]!;
+            const pagamento = calcularPagamento(jogadorFoco, lenda);
+            const podeR = podeReivindicar(estadoVisivel, jogadorFoco.id, cartaId, 'fileira');
+            const podeS = podeReservar(estadoVisivel, jogadorFoco.id, { tipo: 'fileira', cartaId });
+
             return (
-              <div
-                key={idx}
-                className="flex h-40 w-36 items-center justify-center rounded-lg border-2 border-dashed border-stone-800 text-xs text-stone-700"
+              <motion.div
+                key={cartaId}
+                initial={{ opacity: 0, scale: 0.85, rotateY: -90 }}
+                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ duration: 0.3 }}
               >
-                espaço vazio
-              </div>
+                <CartaLenda
+                  lenda={lenda}
+                  pagamento={pagamento}
+                  jogadorTemChronos={jogadorFoco.temChronos}
+                  aoClicarCard={() => aoAbrirFoco(cartaId)}
+                  acoes={[
+                    {
+                      rotulo: 'Reivindicar',
+                      habilitado: podeR.ok,
+                      motivo: podeR.ok ? undefined : podeR.motivo,
+                      destaque: true,
+                      aoClicar: () =>
+                        despachar({
+                          tipo: 'REIVINDICAR',
+                          jogadorId: jogadorFoco.id,
+                          cartaId,
+                          origem: 'fileira',
+                        }),
+                    },
+                    {
+                      rotulo: 'Reservar',
+                      habilitado: podeS.ok,
+                      motivo: podeS.ok ? undefined : podeS.motivo,
+                      aoClicar: () =>
+                        despachar({
+                          tipo: 'RESERVAR',
+                          jogadorId: jogadorFoco.id,
+                          alvo: { tipo: 'fileira', cartaId },
+                        }),
+                    },
+                  ]}
+                />
+              </motion.div>
             );
-          }
-
-          const lenda = LENDA_POR_ID[cartaId]!;
-          const pagamento = calcularPagamento(jogadorFoco, lenda);
-          const podeR = podeReivindicar(estadoVisivel, jogadorFoco.id, cartaId, 'fileira');
-          const podeS = podeReservar(estadoVisivel, jogadorFoco.id, { tipo: 'fileira', cartaId });
-
-          return (
-            <CartaLenda
-              key={cartaId}
-              lenda={lenda}
-              pagamento={pagamento}
-              jogadorTemChronos={jogadorFoco.temChronos}
-              acoes={[
-                {
-                  rotulo: 'Reivindicar',
-                  habilitado: podeR.ok,
-                  motivo: podeR.ok ? undefined : podeR.motivo,
-                  destaque: true,
-                  aoClicar: () =>
-                    despachar({
-                      tipo: 'REIVINDICAR',
-                      jogadorId: jogadorFoco.id,
-                      cartaId,
-                      origem: 'fileira',
-                    }),
-                },
-                {
-                  rotulo: 'Reservar',
-                  habilitado: podeS.ok,
-                  motivo: podeS.ok ? undefined : podeS.motivo,
-                  aoClicar: () =>
-                    despachar({
-                      tipo: 'RESERVAR',
-                      jogadorId: jogadorFoco.id,
-                      alvo: { tipo: 'fileira', cartaId },
-                    }),
-                },
-              ]}
-            />
-          );
-        })}
+          })}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -132,15 +148,69 @@ export function FileirasLendas({
   /** De quem é a perspectiva de ação — default: quem tem a vez (hotseat local). Online: sempre "eu". */
   jogadorFocoId?: string;
 }) {
+  const despachar = usePartida((s) => s.despachar);
   const jogadorFoco =
     estadoVisivel.jogadores.find((j) => j.id === jogadorFocoId) ??
     estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
+  const [cartaFocada, setCartaFocada] = useState<string | null>(null);
+  const lendaFocada = cartaFocada ? LENDA_POR_ID[cartaFocada] : null;
 
   return (
     <div className="flex flex-1 flex-col justify-center gap-3 overflow-y-auto py-2">
       {NIVEIS_DE_CIMA_PARA_BAIXO.map((nivel) => (
-        <FileiraDeNivel key={nivel} estadoVisivel={estadoVisivel} nivel={nivel} jogadorFoco={jogadorFoco} />
+        <FileiraDeNivel
+          key={nivel}
+          estadoVisivel={estadoVisivel}
+          nivel={nivel}
+          jogadorFoco={jogadorFoco}
+          aoAbrirFoco={setCartaFocada}
+        />
       ))}
+
+      {lendaFocada && (
+        <ModalFocoCarta
+          lenda={lendaFocada}
+          jogador={jogadorFoco}
+          pagamento={calcularPagamento(jogadorFoco, lendaFocada)}
+          aoFechar={() => setCartaFocada(null)}
+          acoes={[
+            {
+              rotulo: 'Reivindicar',
+              destaque: true,
+              habilitado: podeReivindicar(estadoVisivel, jogadorFoco.id, lendaFocada.id, 'fileira').ok,
+              motivo: (() => {
+                const r = podeReivindicar(estadoVisivel, jogadorFoco.id, lendaFocada.id, 'fileira');
+                return r.ok ? undefined : r.motivo;
+              })(),
+              aoClicar: () => {
+                despachar({
+                  tipo: 'REIVINDICAR',
+                  jogadorId: jogadorFoco.id,
+                  cartaId: lendaFocada.id,
+                  origem: 'fileira',
+                });
+                setCartaFocada(null);
+              },
+            },
+            {
+              rotulo: 'Reservar',
+              habilitado: podeReservar(estadoVisivel, jogadorFoco.id, { tipo: 'fileira', cartaId: lendaFocada.id }).ok,
+              motivo: (() => {
+                const r = podeReservar(estadoVisivel, jogadorFoco.id, { tipo: 'fileira', cartaId: lendaFocada.id });
+                return r.ok ? undefined : r.motivo;
+              })(),
+              aoClicar: () => {
+                despachar({
+                  tipo: 'RESERVAR',
+                  jogadorId: jogadorFoco.id,
+                  alvo: { tipo: 'fileira', cartaId: lendaFocada.id },
+                });
+                setCartaFocada(null);
+              },
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

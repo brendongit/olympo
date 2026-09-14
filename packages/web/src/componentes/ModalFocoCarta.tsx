@@ -11,9 +11,10 @@ import type { AcaoCarta } from './CartaLenda.js';
 
 interface ModalFocoCartaProps {
   lenda: Lenda;
-  jogador: JogadorOuVisivel;
-  pagamento: { possivel: boolean; pagamento: Bolsa };
-  acoes: AcaoCarta[];
+  /** Omitido para cartas já conquistadas (Domínios) — não há custo a decompor nem ações. */
+  jogador?: JogadorOuVisivel;
+  pagamento?: { possivel: boolean; pagamento: Bolsa };
+  acoes?: AcaoCarta[];
   reservaOculta?: boolean;
   aoFechar: () => void;
 }
@@ -22,13 +23,13 @@ export function ModalFocoCarta({
   lenda,
   jogador,
   pagamento,
-  acoes,
+  acoes = [],
   reservaOculta,
   aoFechar,
 }: ModalFocoCartaProps) {
   useFecharComEsc(aoFechar);
   const custosVisiveis = ORDEM_ESSENCIAS.filter((e) => lenda.custo[e] > 0);
-  const concedeChronos = lenda.chronos && !jogador.temChronos;
+  const concedeChronos = lenda.chronos && !!jogador && !jogador.temChronos;
 
   return (
     <div
@@ -66,46 +67,50 @@ export function ModalFocoCarta({
           {reservaOculta ? '🂠 Presságio oculto' : lenda.nome}
         </h2>
 
-        <div className="mb-4 rounded-lg border border-stone-800 bg-stone-950/60 p-3">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-            Custo decomposto
-          </h3>
-          {custosVisiveis.length === 0 ? (
-            <p className="text-sm text-stone-300">Grátis — nenhuma essência necessária.</p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {custosVisiveis.map((e) => {
-                const info = INFO_FICHA[e];
-                const total = lenda.custo[e];
-                const coberto = Math.min(total, jogador.dominios[e]);
-                const restante = total - coberto;
-                return (
-                  <li key={e} className="flex items-center gap-1 text-sm text-stone-200">
-                    <span className={`flex items-center gap-0.5 rounded px-1 ${info.corFundo} ${info.corTexto}`}>
-                      {info.icone}
-                      {total}
-                    </span>
-                    {coberto > 0 && (
-                      <span className="text-stone-400">
-                        − {coberto} domínio = <span className="font-semibold text-stone-100">{restante}</span> a
-                        pagar
+        {jogador && pagamento ? (
+          <div className="mb-4 rounded-lg border border-stone-800 bg-stone-950/60 p-3">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Custo decomposto
+            </h3>
+            {custosVisiveis.length === 0 ? (
+              <p className="text-sm text-stone-300">Grátis — nenhuma essência necessária.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {custosVisiveis.map((e) => {
+                  const info = INFO_FICHA[e];
+                  const total = lenda.custo[e];
+                  const coberto = Math.min(total, jogador.dominios[e]);
+                  const restante = total - coberto;
+                  return (
+                    <li key={e} className="flex items-center gap-1 text-sm text-stone-200">
+                      <span className={`flex items-center gap-0.5 rounded px-1 ${info.corFundo} ${info.corTexto}`}>
+                        {info.icone}
+                        {total}
                       </span>
-                    )}
-                    {coberto === 0 && <span className="text-stone-400">a pagar</span>}
+                      {coberto > 0 && (
+                        <span className="text-stone-400">
+                          − {coberto} domínio = <span className="font-semibold text-stone-100">{restante}</span> a
+                          pagar
+                        </span>
+                      )}
+                      {coberto === 0 && <span className="text-stone-400">a pagar</span>}
+                    </li>
+                  );
+                })}
+                {pagamento.pagamento.icor > 0 && (
+                  <li className="flex items-center gap-1 text-sm text-yellow-300">
+                    <span className="flex items-center gap-0.5 rounded bg-yellow-400 px-1 text-amber-950">
+                      💧{pagamento.pagamento.icor}
+                    </span>
+                    Ícor necessário para completar o pagamento
                   </li>
-                );
-              })}
-              {pagamento.pagamento.icor > 0 && (
-                <li className="flex items-center gap-1 text-sm text-yellow-300">
-                  <span className="flex items-center gap-0.5 rounded bg-yellow-400 px-1 text-amber-950">
-                    💧{pagamento.pagamento.icor}
-                  </span>
-                  Ícor necessário para completar o pagamento
-                </li>
-              )}
-            </ul>
-          )}
-        </div>
+                )}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <p className="mb-4 text-center text-sm text-stone-500">Já conquistada — concede Domínio permanente.</p>
+        )}
 
         <div className="flex flex-col gap-2">
           {acoes.map((a) => (

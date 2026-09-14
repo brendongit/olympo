@@ -4,12 +4,14 @@
 // jogadorAtual sozinho. Presságios do dono do painel nunca vêm redigidos
 // pela projeção (Seção 18), então `cartaId` é sempre real aqui.
 
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podePassar, podeReivindicar } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
 import { CartaLenda } from './CartaLenda.js';
+import { ModalFocoCarta } from './ModalFocoCarta.js';
 
 export function PainelJogador({
   estadoVisivel,
@@ -24,6 +26,12 @@ export function PainelJogador({
     estadoVisivel.jogadores[estadoVisivel.jogadorAtual]!;
   const totalFichas = ORDEM_FICHAS.reduce((acc, f) => acc + jogador.fichas[f], 0);
   const podeP = podePassar(estadoVisivel, jogador.id);
+  const [cartaFocada, setCartaFocada] = useState<string | null>(null);
+  const lendaFocada = cartaFocada ? LENDA_POR_ID[cartaFocada] : null;
+  const pilhasDeLendas = ORDEM_ESSENCIAS.map((essencia) => ({
+    essencia,
+    cartas: jogador.lendas.filter((id) => LENDA_POR_ID[id]?.dominio === essencia),
+  })).filter((pilha) => pilha.cartas.length > 0);
 
   return (
     <div className="flex flex-col gap-3 border-t border-stone-800 bg-stone-900 p-3 md:flex-row md:items-start md:justify-between">
@@ -95,27 +103,44 @@ export function PainelJogador({
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-end gap-3">
           <span className="text-xs uppercase tracking-wide text-stone-500">
             Lendas ({jogador.lendas.length})
           </span>
           {jogador.lendas.length === 0 && <span className="text-xs text-stone-600">nenhuma ainda</span>}
-          <div className="flex max-h-14 flex-wrap gap-1 overflow-y-auto">
-            {jogador.lendas.map((id) => {
-              const lenda = LENDA_POR_ID[id];
-              if (!lenda) return null;
-              const info = INFO_FICHA[lenda.dominio];
-              return (
-                <span
-                  key={id}
-                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${info.corFundo} ${info.corTexto}`}
-                  title={lenda.nome}
-                >
-                  {info.icone} {lenda.nome}
-                </span>
-              );
-            })}
-          </div>
+          {pilhasDeLendas.map(({ essencia, cartas }) => (
+            <div
+              key={essencia}
+              className="relative flex items-center"
+              style={{ width: 56 + (cartas.length - 1) * 22, height: 78 }}
+              title={`${INFO_FICHA[essencia].rotulo} ×${cartas.length}`}
+            >
+              <AnimatePresence>
+                {cartas.map((id, i) => {
+                  const lenda = LENDA_POR_ID[id];
+                  if (!lenda) return null;
+                  const ultima = i === cartas.length - 1;
+                  return (
+                    <motion.div
+                      key={id}
+                      initial={{ opacity: 0, scale: 0.7 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.25 }}
+                      className="absolute top-0"
+                      style={{ left: i * 22, zIndex: i }}
+                    >
+                      <CartaLenda
+                        lenda={lenda}
+                        tamanho="mini"
+                        acoes={[]}
+                        aoClicarCard={ultima ? () => setCartaFocada(id) : undefined}
+                      />
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -173,6 +198,8 @@ export function PainelJogador({
       >
         Passar
       </button>
+
+      {lendaFocada && <ModalFocoCarta lenda={lendaFocada} aoFechar={() => setCartaFocada(null)} />}
     </div>
   );
 }

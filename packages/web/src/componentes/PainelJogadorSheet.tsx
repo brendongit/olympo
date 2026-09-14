@@ -4,11 +4,12 @@
 // de qualquer ação continua vindo do motor (podePassar/podeReivindicar).
 
 import { useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podePassar, podeReivindicar, SANTUARIO_POR_ID } from '@olympos/motor';
 import { INFO_FICHA, ORDEM_ESSENCIAS, ORDEM_FICHAS } from '../lib/tema.js';
 import { usePartida } from '../loja/usePartida.js';
+import { CartaLenda } from './CartaLenda.js';
 import { ModalFocoCarta } from './ModalFocoCarta.js';
 
 const ALTURA_RECOLHIDA = 168;
@@ -30,9 +31,13 @@ export function PainelJogadorSheet({
 
   const [expandido, setExpandido] = useState(false);
   const [alturaArraste, setAlturaArraste] = useState<number | null>(null);
-  const [presagioFocado, setPresagioFocado] = useState<string | null>(null);
+  const [cartaFocada, setCartaFocada] = useState<string | null>(null);
   const arrastoRef = useRef<{ inicioY: number; alturaInicial: number } | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const pilhasDeLendas = ORDEM_ESSENCIAS.map((essencia) => ({
+    essencia,
+    cartas: jogador.lendas.filter((id) => LENDA_POR_ID[id]?.dominio === essencia),
+  })).filter((pilha) => pilha.cartas.length > 0);
 
   const alturaExpandidaPx =
     typeof window !== 'undefined' ? Math.round(window.innerHeight * ALTURA_EXPANDIDA_VH) : 400;
@@ -61,7 +66,10 @@ export function PainelJogadorSheet({
     arrastoRef.current = null;
   }
 
-  const lendaFocada = presagioFocado ? LENDA_POR_ID[presagioFocado] : null;
+  const lendaFocada = cartaFocada ? LENDA_POR_ID[cartaFocada] : null;
+  const pressagioFocado = cartaFocada
+    ? jogador.pressagios.find((p) => p.cartaId === cartaFocada)
+    : undefined;
 
   return (
     <div
@@ -153,7 +161,7 @@ export function PainelJogadorSheet({
               <button
                 key={cartaId}
                 type="button"
-                onClick={() => setPresagioFocado(cartaId)}
+                onClick={() => setCartaFocada(cartaId)}
                 className="flex min-h-[32px] min-w-[32px] items-center justify-center rounded border border-stone-700 bg-stone-800 text-sm"
                 title={LENDA_POR_ID[cartaId]?.nome}
               >
@@ -186,21 +194,41 @@ export function PainelJogadorSheet({
           <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
             Lendas reivindicadas ({jogador.lendas.length})
           </h3>
-          <div className="mb-3 flex flex-wrap gap-1">
+          <div className="mb-3 flex flex-wrap items-end gap-3">
             {jogador.lendas.length === 0 && <span className="text-xs text-stone-600">nenhuma ainda</span>}
-            {jogador.lendas.map((id) => {
-              const lenda = LENDA_POR_ID[id];
-              if (!lenda) return null;
-              return (
-                <span
-                  key={id}
-                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${INFO_FICHA[lenda.dominio].corFundo} ${INFO_FICHA[lenda.dominio].corTexto}`}
-                  title={lenda.nome}
-                >
-                  {INFO_FICHA[lenda.dominio].icone} {lenda.nome}
-                </span>
-              );
-            })}
+            {pilhasDeLendas.map(({ essencia, cartas }) => (
+              <div
+                key={essencia}
+                className="relative flex items-center"
+                style={{ width: 56 + (cartas.length - 1) * 22, height: 78 }}
+                title={`${INFO_FICHA[essencia].rotulo} ×${cartas.length}`}
+              >
+                <AnimatePresence>
+                  {cartas.map((id, i) => {
+                    const lenda = LENDA_POR_ID[id];
+                    if (!lenda) return null;
+                    const ultima = i === cartas.length - 1;
+                    return (
+                      <motion.div
+                        key={id}
+                        initial={{ opacity: 0, scale: 0.7 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.25 }}
+                        className="absolute top-0"
+                        style={{ left: i * 22, zIndex: i }}
+                      >
+                        <CartaLenda
+                          lenda={lenda}
+                          tamanho="mini"
+                          acoes={[]}
+                          aoClicarCard={ultima ? () => setCartaFocada(id) : undefined}
+                        />
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            ))}
           </div>
 
           <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
@@ -237,13 +265,13 @@ export function PainelJogadorSheet({
         </div>
       )}
 
-      {lendaFocada && (
+      {lendaFocada && pressagioFocado && (
         <ModalFocoCarta
           lenda={lendaFocada}
           jogador={jogador}
           pagamento={calcularPagamento(jogador, lendaFocada)}
-          reservaOculta={jogador.pressagios.find((p) => p.cartaId === lendaFocada.id)?.oculto}
-          aoFechar={() => setPresagioFocado(null)}
+          reservaOculta={pressagioFocado.oculto}
+          aoFechar={() => setCartaFocada(null)}
           acoes={[
             {
               rotulo: 'Reivindicar',
@@ -260,11 +288,15 @@ export function PainelJogadorSheet({
                   cartaId: lendaFocada.id,
                   origem: 'pressagio',
                 });
-                setPresagioFocado(null);
+                setCartaFocada(null);
               },
             },
           ]}
         />
+      )}
+
+      {lendaFocada && !pressagioFocado && (
+        <ModalFocoCarta lenda={lendaFocada} aoFechar={() => setCartaFocada(null)} />
       )}
     </div>
   );

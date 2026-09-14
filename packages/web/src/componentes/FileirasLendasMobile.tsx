@@ -5,6 +5,7 @@
 // botões de ação no card.
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { EstadoVisivel } from '@olympos/motor';
 import { calcularPagamento, LENDA_POR_ID, podeReivindicar, podeReservar } from '@olympos/motor';
 import { NOME_NIVEL } from '../lib/tema.js';
@@ -58,39 +59,44 @@ export function FileirasLendasMobile({
             <div
               className="flex flex-1 snap-x snap-mandatory gap-2 overflow-x-auto scroll-px-2 px-1 pb-1"
               aria-label={`Fileira de ${NOME_NIVEL[nivel]}, role para o lado para ver as 4 cartas`}
+              style={{ perspective: 1000 }}
             >
-              {estadoVisivel.fileiras[nivel].map((cartaId, idx) => {
-                if (!cartaId) {
+              <AnimatePresence mode="popLayout">
+                {estadoVisivel.fileiras[nivel].map((cartaId, idx) => {
+                  if (!cartaId) {
+                    return (
+                      <div
+                        key={`vazio-${idx}`}
+                        className="flex h-40 w-36 shrink-0 snap-start items-center justify-center rounded-lg border-2 border-dashed border-stone-800 text-xs text-stone-700"
+                      >
+                        espaço vazio
+                      </div>
+                    );
+                  }
+
+                  const lenda = LENDA_POR_ID[cartaId]!;
+                  const pagamento = calcularPagamento(jogadorDaVez, lenda);
+
                   return (
-                    <div
-                      key={idx}
-                      className="flex h-40 w-36 shrink-0 snap-start items-center justify-center rounded-lg border-2 border-dashed border-stone-800 text-xs text-stone-700"
+                    <motion.div
+                      key={cartaId}
+                      initial={{ opacity: 0, scale: 0.85, rotateY: -90 }}
+                      animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                      exit={{ opacity: 0, scale: 0.85 }}
+                      transition={{ duration: 0.3 }}
+                      className="shrink-0 snap-start"
                     >
-                      espaço vazio
-                    </div>
+                      <CartaLenda
+                        lenda={lenda}
+                        pagamento={pagamento}
+                        jogadorTemChronos={jogadorDaVez.temChronos}
+                        aoClicarCard={() => setCartaFocada(cartaId)}
+                        acoes={[]}
+                      />
+                    </motion.div>
                   );
-                }
-
-                const lenda = LENDA_POR_ID[cartaId]!;
-                const pagamento = calcularPagamento(jogadorDaVez, lenda);
-
-                return (
-                  <button
-                    key={cartaId}
-                    type="button"
-                    onClick={() => setCartaFocada(cartaId)}
-                    className="shrink-0 snap-start text-left"
-                    aria-label={`${lenda.nome}, ver detalhes e ações`}
-                  >
-                    <CartaLenda
-                      lenda={lenda}
-                      pagamento={pagamento}
-                      jogadorTemChronos={jogadorDaVez.temChronos}
-                      acoes={[]}
-                    />
-                  </button>
-                );
-              })}
+                })}
+              </AnimatePresence>
             </div>
           </div>
         );
