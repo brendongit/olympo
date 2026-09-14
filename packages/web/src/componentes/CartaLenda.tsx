@@ -2,11 +2,29 @@
 // resultados já calculados pelo motor (podeReivindicar/podeReservar/
 // calcularPagamento) e só decide como desenhar — nenhuma regra é decidida
 // aqui.
+//
+// Layout estilo TCG (moldura na cor do domínio + arte + sidebar de atributos), todo em %
+// do próprio card via container queries (cqw) — nenhuma medida de layout em
+// px fixo, então o card escala igual em qualquer largura (mini ou completo).
+// Mapeamento de dado pra slot visual: kléos → número grande (canto sup.
+// esquerdo), custo por essência → badges da sidebar, domínio → medalhão
+// (canto sup. direito, é o "elemento" da carta), nome → faixa inferior,
+// `lenda.arte` → arte de fundo (placeholder cinza-azulado se ausente).
 
-import { useReducedMotion, useSpring, useTransform, motion, useMotionValue } from 'framer-motion';
-import type { Bolsa, Lenda } from '@olympos/motor';
-import { COR_NIVEL, estiloAltoContraste, INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
-import { usePreferencias } from '../loja/usePreferencias.js';
+import {
+  useReducedMotion,
+  useSpring,
+  useTransform,
+  motion,
+  useMotionValue,
+} from "framer-motion";
+import type { Bolsa, Essencia, Lenda } from "@olympos/motor";
+import {
+  estiloAltoContraste,
+  INFO_FICHA,
+  ORDEM_ESSENCIAS,
+} from "../lib/tema.js";
+import { usePreferencias } from "../loja/usePreferencias.js";
 
 export interface AcaoCarta {
   rotulo: string;
@@ -24,14 +42,78 @@ interface CartaLendaProps {
   reservaOculta?: boolean; // presságio próprio ainda oculto para os outros — só um lembrete visual
   /** Necessário só para cartas de nível 3, para decidir se a Marca de Chronos pulsa (Seção 19.6). */
   jogadorTemChronos?: boolean;
-  /** 'mini' é usado nas pilhas de cartas conquistadas (Domínios) — card reduzido, sem custo/ações. */
-  tamanho?: 'completo' | 'mini';
-  /** Abre o foco da carta (ModalFocoCarta) ao clicar em qualquer parte do card. Botões de ação não disparam isso. */
+  /** 'mini' é usado nas pilhas de cartas conquistadas (Domínios) — card reduzido, sem sidebar/badges. */
+  tamanho?: "completo" | "mini";
+  /** Abre o foco da carta (ModalFocoCarta, onde vivem as ações) ao clicar em qualquer parte do card. */
   aoClicarCard?: () => void;
+  /** Sobrescreve a largura padrão de `tamanho` (ex.: ModalFocoCarta exibindo a carta em destaque, maior). */
+  larguraPx?: number;
 }
 
+type EstiloCSS = React.CSSProperties &
+  Record<string, string | number | undefined>;
+
+const TOKENS = {
+  contorno: "#3E3E3E",
+};
+
+// Paleta fixa da spec (gold/amber/violet/crimson/azure), mapeada preservando
+// a associação essência↔cor que já existia (oceano=azul, chama=vermelho,
+// sombra=violeta); éter e terra dividem gold/amber por não haver "verde" na
+// paleta nova — o ícone de cada essência continua diferenciando visualmente.
+const CORES_BADGE: Record<
+  Essencia,
+  { light: string; base: string; dark: string }
+> = {
+  eter: { light: "#F2E23C", base: "#D6C00C", dark: "#8C7D06" }, // gold
+  oceano: { light: "#3F97E0", base: "#1B62B5", dark: "#14356F" }, // azure
+  terra: { light: "#F7A733", base: "#E08205", dark: "#7A4708" }, // amber
+  chama: { light: "#FD8B84", base: "#F0655A", dark: "#C23B2C" }, // crimson
+  sombra: { light: "#C05FC2", base: "#9B3E9D", dark: "#5C245D" }, // violet
+};
+// Ícor não faz parte da paleta de 5 cores da spec (é ficha "fora do
+// mercado") — tom amarelo derivado da cor que o resto da UI já usa pra ele.
+const COR_BADGE_ICOR = { light: "#FDE68A", base: "#EAB308", dark: "#854D0E" };
+
+const FONTE_DISPLAY =
+  "'Kelly Slab','Big Shoulders Display','Oswald',Impact,system-ui,sans-serif";
+
+function gradienteRadialBadge(cores: {
+  light: string;
+  base: string;
+  dark: string;
+}): string {
+  return `radial-gradient(circle at 32% 28%, ${cores.light} 0%, ${cores.base} 55%, ${cores.dark} 100%)`;
+}
+
+/** A moldura (fundo/header/faixa de nome) acompanha a cor do domínio da carta — é o "elemento" dela. */
+function molduraPorDominio(dominio: Essencia): string {
+  return CORES_BADGE[dominio].base;
+}
+
+/** Preenchimento branco sólido com contorno escuro — números/nome em relevo, estilo TCG. */
+function estiloTextoTCG(fontSizeCqw: number, corTexto = "#FFFFFF"): EstiloCSS {
+  return {
+    fontFamily: FONTE_DISPLAY,
+    fontWeight: 800,
+    fontSize: `${fontSizeCqw}cqw`,
+    lineHeight: 1,
+    color: corTexto,
+    WebkitTextStroke: `1px ${TOKENS.contorno}`,
+    paintOrder: "stroke fill",
+    textShadow: `-1px -1px 0 ${TOKENS.contorno}, 1px -1px 0 ${TOKENS.contorno}, -1px 1px 0 ${TOKENS.contorno}, 1px 1px 0 ${TOKENS.contorno}`,
+  };
+}
+
+// Espaçamento vertical igual dos badges de atributo na sidebar — faixa
+// utilizável derivada dos exemplos da spec (N=5 → centros em 31.19% /
+// 45.87% / 60.55% / 75.23% / 89.91%, passo constante de 14.68%).
+const BADGES_TOPO_UTIL = 23.85;
+const BADGES_ALTURA_UTIL = 73.4;
+
 const SUPORTA_TILT_FINO =
-  typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
 
 export function CartaLenda({
   lenda,
@@ -39,21 +121,33 @@ export function CartaLenda({
   acoes,
   reservaOculta,
   jogadorTemChronos,
-  tamanho = 'completo',
+  tamanho = "completo",
   aoClicarCard,
+  larguraPx,
 }: CartaLendaProps) {
   const altoContraste = usePreferencias((s) => s.altoContraste);
   const animacoesReduzidas = usePreferencias((s) => s.animacoesReduzidas);
   const reduzMotionSO = useReducedMotion();
-  const mini = tamanho === 'mini';
+  const mini = tamanho === "mini";
   const precisaIcor = !!pagamento?.possivel && pagamento.pagamento.icor > 0;
-  const reivindicavelDireto = !!pagamento?.possivel && pagamento.pagamento.icor === 0;
+  const reivindicavelDireto =
+    !!pagamento?.possivel && pagamento.pagamento.icor === 0;
 
-  const tiltAtivo = !mini && SUPORTA_TILT_FINO && animacoesReduzidas !== 'sempre' && !reduzMotionSO;
+  const tiltAtivo =
+    !mini &&
+    SUPORTA_TILT_FINO &&
+    animacoesReduzidas !== "sempre" &&
+    !reduzMotionSO;
   const ponteiroX = useMotionValue(0.5);
   const ponteiroY = useMotionValue(0.5);
-  const rotateX = useSpring(useTransform(ponteiroY, [0, 1], [8, -8]), { stiffness: 300, damping: 30 });
-  const rotateY = useSpring(useTransform(ponteiroX, [0, 1], [-8, 8]), { stiffness: 300, damping: 30 });
+  const rotateX = useSpring(useTransform(ponteiroY, [0, 1], [8, -8]), {
+    stiffness: 300,
+    damping: 30,
+  });
+  const rotateY = useSpring(useTransform(ponteiroX, [0, 1], [-8, 8]), {
+    stiffness: 300,
+    damping: 30,
+  });
 
   function aoMoverPonteiro(ev: React.PointerEvent<HTMLDivElement>) {
     if (!tiltAtivo) return;
@@ -69,33 +163,69 @@ export function CartaLenda({
 
   function aoTeclarCard(ev: React.KeyboardEvent<HTMLDivElement>) {
     if (!aoClicarCard) return;
-    if (ev.key === 'Enter' || ev.key === ' ') {
+    if (ev.key === "Enter" || ev.key === " ") {
       ev.preventDefault();
       aoClicarCard();
     }
   }
 
-  const borda = reivindicavelDireto
-    ? 'border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)] animate-pulse motion-reduce:animate-none'
-    : precisaIcor
-      ? 'border-amber-400'
-      : `${COR_NIVEL[lenda.nivel]}`;
-
   const custosVisiveis = ORDEM_ESSENCIAS.filter((e) => lenda.custo[e] > 0);
   const concedeChronos = lenda.chronos && !jogadorTemChronos;
+  const nomeExibido = reservaOculta ? "🂠 (só você vê)" : lenda.nome;
+
+  // Sem medida de shrink-to-fit nativa em CSS puro — aproxima reduzindo a
+  // fonte pra nomes longos em vez de truncar (a spec pede "sem reticências
+  // se der pra reduzir a fonte").
+  const NOME_FONTE_BASE_CQW = 10;
+  const NOME_CARACTERES_BASE = 8;
+  const nomeFonteCqw =
+    nomeExibido.length <= NOME_CARACTERES_BASE
+      ? NOME_FONTE_BASE_CQW
+      : Math.max(
+          NOME_FONTE_BASE_CQW * (NOME_CARACTERES_BASE / nomeExibido.length),
+          NOME_FONTE_BASE_CQW * 0.55,
+        );
+
+  const itensBadge = mini
+    ? []
+    : [
+        ...custosVisiveis.map((e) => ({
+          chave: e as Essencia | "icor",
+          valor: lenda.custo[e],
+          cores: CORES_BADGE[e],
+          rotulo: INFO_FICHA[e].rotulo,
+        })),
+        ...(precisaIcor
+          ? [
+              {
+                chave: "icor" as const,
+                valor: pagamento!.pagamento.icor,
+                cores: COR_BADGE_ICOR,
+                rotulo: INFO_FICHA.icor.rotulo,
+              },
+            ]
+          : []),
+      ];
 
   // Seção 20: aria-label completo — nome/nível/domínio/kléos/argo/chronos +
   // custo por extenso + estado de cada ação, pra não depender só do visual.
   const custoFalado =
     custosVisiveis.length === 0
-      ? 'grátis'
+      ? "grátis"
       : `custo ${custosVisiveis
           .map((e) => `${lenda.custo[e]} ${INFO_FICHA[e].rotulo}`)
-          .join(', ')
-          .replace(/, ([^,]*)$/, ' e $1')}`;
+          .join(", ")
+          .replace(/, ([^,]*)$/, " e $1")}`;
   const estadosFalados = acoes
-    .map((a) => `${a.habilitado ? 'Você pode' : 'Não é possível'} ${a.rotulo.toLowerCase()}${!a.habilitado && a.motivo ? ` (${a.motivo})` : ''}`)
-    .join('. ');
+    .map(
+      (a) =>
+        `${a.habilitado ? "Você pode" : "Não é possível"} ${a.rotulo.toLowerCase()}${!a.habilitado && a.motivo ? ` (${a.motivo})` : ""}`,
+    )
+    .join(". ");
+
+  const corContornoRoot =
+    reivindicavelDireto || precisaIcor ? "#FBBF24" : TOKENS.contorno;
+  const alturaArte = mini ? 69.26 : 68.81; // completo: até a faixa de nome (91.74%); mini: sem sidebar, mesma régua
 
   return (
     <div style={tiltAtivo ? { perspective: 800 } : undefined}>
@@ -106,103 +236,282 @@ export function CartaLenda({
         onClick={aoClicarCard}
         onKeyDown={aoClicarCard ? aoTeclarCard : undefined}
         tabIndex={aoClicarCard ? 0 : undefined}
-        style={tiltAtivo ? { rotateX, rotateY } : undefined}
-        className={`flex flex-col rounded-lg border-2 bg-stone-900 text-stone-100 ${
-          mini ? 'w-14 gap-0.5 p-1' : 'w-36 p-2'
-        } ${aoClicarCard ? 'cursor-pointer' : ''} ${borda}`}
+        style={
+          {
+            ...(tiltAtivo ? { rotateX, rotateY } : {}),
+            containerType: "inline-size",
+            position: "relative",
+            isolation: "isolate",
+            overflow: "hidden",
+            aspectRatio: "5 / 7",
+            borderRadius: "7.7% / 5.5%",
+            border: `1.5px solid ${corContornoRoot}`,
+            background: molduraPorDominio(lenda.dominio),
+            boxShadow: reivindicavelDireto
+              ? "0 0 10px rgba(251,191,36,0.5)"
+              : undefined,
+            width: larguraPx,
+          } as EstiloCSS
+        }
+        className={`${mini ? "w-14" : "w-36"} ${aoClicarCard ? "cursor-pointer" : ""} ${
+          reivindicavelDireto ? "animate-pulse motion-reduce:animate-none" : ""
+        }`}
         aria-label={`${lenda.nome}, nível ${lenda.nivel}, domínio ${INFO_FICHA[lenda.dominio].rotulo}, ${lenda.kleos} Kléos${
-          lenda.argo > 0 ? `, ${lenda.argo} símbolo${lenda.argo > 1 ? 's' : ''} do Argo` : ''
-        }${concedeChronos ? ', concede a Essência de Chronos' : ''}, ${custoFalado}${estadosFalados ? `. ${estadosFalados}` : ''}`}
+          lenda.argo > 0
+            ? `, ${lenda.argo} símbolo${lenda.argo > 1 ? "s" : ""} do Argo`
+            : ""
+        }${concedeChronos ? ", concede a Essência de Chronos" : ""}, ${custoFalado}${estadosFalados ? `. ${estadosFalados}` : ""}`}
       >
-        <div className={`flex items-center justify-between font-bold ${mini ? 'text-[9px]' : 'mb-1 text-sm'}`}>
-          <span title="Kléos">{lenda.kleos > 0 ? `${lenda.kleos}★` : '—'}</span>
-          {lenda.argo > 0 && (
-            <span className="text-stone-300" title={`${lenda.argo} símbolo(s) do Argo`}>
-              {'⛵'.repeat(lenda.argo)}
-            </span>
+        {/* 1. Arte — sangra até a borda direita; placeholder se `arte` ausente */}
+        <div
+          style={{
+            position: "absolute",
+            left: mini ? 0 : "26.92%",
+            top: "22.48%",
+            width: mini ? "100%" : "73.08%",
+            height: `${alturaArte}%`,
+            overflow: "hidden",
+            borderBottom: `1px solid ${TOKENS.contorno}`,
+            zIndex: 1,
+          }}
+        >
+          {lenda.arte ? (
+            <img
+              src={lenda.arte}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+              }}
+            />
+          ) : (
+            <div
+              style={{ width: "100%", height: "100%", background: "#5C6B73" }}
+            />
           )}
+        </div>
+
+        {/* 2. Sidebar — só no completo; desce até a base, por trás da faixa de nome */}
+        {!mini && (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: "22.48%",
+              width: "26.28%",
+              height: "77.52%",
+              background:
+                "linear-gradient(180deg,#C9D2CC 0%,#F6E7CC 28%,#FDF8E6 48%,#E2E7E4 70%,#C3D2D3 100%)",
+              borderRight: `1px solid ${TOKENS.contorno}`,
+              zIndex: 2,
+            }}
+          />
+        )}
+
+        {/* 3. Faixa de nome */}
+        <div
+          style={{
+            position: "absolute",
+            left: mini ? 0 : "26.92%",
+            top: "91.74%",
+            width: mini ? "100%" : "73.08%",
+            height: "7.80%",
+            background: molduraPorDominio(lenda.dominio),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: mini ? "center" : "flex-end",
+            paddingRight: mini ? 0 : "12.2%",
+            overflow: "hidden",
+            zIndex: 3,
+          }}
+        >
           <span
-            className={`flex items-center justify-center rounded-full ${INFO_FICHA[lenda.dominio].corFundo} ${INFO_FICHA[lenda.dominio].corTexto} ${
-              mini ? 'h-3.5 w-3.5 text-[8px]' : 'h-5 w-5 text-xs'
-            }`}
-            style={estiloAltoContraste(lenda.dominio, altoContraste)}
-            title={`Domínio: ${INFO_FICHA[lenda.dominio].rotulo}`}
+            style={{
+              ...estiloTextoTCG(nomeFonteCqw),
+              whiteSpace: "nowrap",
+              maxWidth: "87%",
+              overflow: "hidden",
+            }}
+            title={lenda.nome}
           >
-            {INFO_FICHA[lenda.dominio].icone}
+            {nomeExibido}
           </span>
         </div>
 
-        {lenda.chronos && (
-          <div className={`flex justify-end ${mini ? '' : 'mb-1'}`}>
-            <span
-              className={`text-xs ${concedeChronos ? 'text-amber-300 animate-pulse motion-reduce:animate-none' : 'text-stone-700'}`}
-              title={concedeChronos ? 'Concede a Essência de Chronos' : 'Marca de Chronos — você já tem a Essência'}
-            >
-              ⧗
-            </span>
-          </div>
-        )}
-
+        {/* 4. Header */}
         <div
-          className={`truncate text-center font-serif font-semibold ${mini ? 'text-[9px]' : 'mb-1 text-sm'}`}
-          title={lenda.nome}
-        >
-          {reservaOculta ? '🂠 (só você vê)' : lenda.nome}
-        </div>
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "22.02%",
+            background: molduraPorDominio(lenda.dominio),
+            zIndex: 4,
+          }}
+        />
 
-        {!mini && (
-          <div className="mb-2 flex flex-wrap justify-center gap-1 border-t border-stone-700 pt-1">
-            {custosVisiveis.length === 0 ? (
-              <span className="text-xs text-stone-500">grátis</span>
-            ) : (
-              custosVisiveis.map((e) => (
-                <span
-                  key={e}
-                  className={`flex items-center gap-0.5 rounded px-1 text-xs ${INFO_FICHA[e].corFundo} ${INFO_FICHA[e].corTexto}`}
-                  style={estiloAltoContraste(e, altoContraste)}
-                  title={INFO_FICHA[e].rotulo}
-                >
-                  {INFO_FICHA[e].icone}
-                  {lenda.custo[e]}
-                </span>
-              ))
-            )}
-            {precisaIcor && (
+        {/* Argo/Chronos — sem slot próprio na spec; espaço livre do header, só no completo */}
+        {!mini && (lenda.argo > 0 || lenda.chronos) && (
+          <div
+            style={{
+              position: "absolute",
+              top: "2%",
+              left: "20%",
+              width: "58%",
+              height: "18%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4%",
+              zIndex: 5,
+            }}
+          >
+            {lenda.argo > 0 && (
               <span
-                className="flex items-center gap-0.5 rounded bg-yellow-400 px-1 text-xs text-amber-950"
-                title="Vai precisar de Ícor para completar o pagamento"
+                style={estiloTextoTCG(4.5)}
+                title={`${lenda.argo} símbolo(s) do Argo`}
               >
-                💧{pagamento!.pagamento.icor}
+                {"⛵".repeat(lenda.argo)}
+              </span>
+            )}
+            {lenda.chronos && (
+              <span
+                style={estiloTextoTCG(
+                  5.5,
+                  concedeChronos ? "#FCD34D" : "#9CA3AF",
+                )}
+                className={
+                  concedeChronos
+                    ? "animate-pulse motion-reduce:animate-none"
+                    : ""
+                }
+                title={
+                  concedeChronos
+                    ? "Concede a Essência de Chronos"
+                    : "Marca de Chronos — você já tem a Essência"
+                }
+              >
+                ⧗
               </span>
             )}
           </div>
         )}
 
-        {!mini && acoes.length > 0 && (
-          <div className="mt-auto flex flex-col gap-1">
-            {acoes.map((a) => (
-              <button
-                key={a.rotulo}
-                type="button"
-                disabled={!a.habilitado}
-                title={a.motivo}
-                onClick={(ev) => {
-                  ev.stopPropagation();
-                  a.aoClicar();
+        {/* 5. Custo (Kléos) */}
+        <div
+          style={{
+            position: "absolute",
+            left: "6.41%",
+            top: "3.67%",
+            width: "12.82%",
+            height: "13.76%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 5,
+          }}
+        >
+          <span style={estiloTextoTCG(21.7)} title="Kléos">
+            {lenda.kleos > 0 ? lenda.kleos : "—"}
+          </span>
+        </div>
+
+        {/* 6. Badges de atributo (custo por essência + Ícor se precisar) */}
+        {itensBadge.map((item, i) => {
+          const passo = BADGES_ALTURA_UTIL / itensBadge.length;
+          const centroTopo = BADGES_TOPO_UTIL + passo * (i + 0.5);
+          return (
+            <div
+              key={item.chave}
+              title={item.rotulo}
+              style={{
+                position: "absolute",
+                left: "11.22%",
+                top: `${centroTopo}%`,
+                width: "14.10%",
+                aspectRatio: "1 / 1",
+                transform: "translate(-50%, -50%)",
+                zIndex: 6,
+              }}
+            >
+              {/* satélite — atrás do principal, mesma cor */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: "75.05%",
+                  top: "47.75%",
+                  width: "54.5%",
+                  height: "54.5%",
+                  borderRadius: "50%",
+                  backgroundImage: gradienteRadialBadge(item.cores),
+                  outline: "1px solid rgba(62,62,62,0.7)",
                 }}
-                className={`rounded px-2 py-1 text-xs font-semibold transition ${
-                  a.habilitado
-                    ? a.destaque
-                      ? 'bg-amber-500 text-stone-950 hover:bg-amber-400'
-                      : 'bg-stone-700 text-stone-100 hover:bg-stone-600'
-                    : 'cursor-not-allowed bg-stone-800 text-stone-600'
-                }`}
+              />
+              {/* principal */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "50%",
+                  backgroundImage: gradienteRadialBadge(item.cores),
+                  outline: "1px solid rgba(62,62,62,0.7)",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                {a.rotulo}
-              </button>
-            ))}
+                {altoContraste && item.chave !== "icor" && (
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-full"
+                    style={estiloAltoContraste(item.chave, true)}
+                  />
+                )}
+                <span style={estiloTextoTCG(8.46)}>{item.valor}</span>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* 7. Medalhão — domínio/elemento da carta */}
+        <div
+          style={{
+            position: "absolute",
+            left: "79.15%",
+            top: "8.92%",
+            width: "17.3%",
+            aspectRatio: "1 / 1",
+            zIndex: 7,
+          }}
+          title={`Domínio: ${INFO_FICHA[lenda.dominio].rotulo}`}
+        >
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg,#E8EFEE,#A9BBBC 60%,#E8EFEE)",
+              outline: `1px solid ${TOKENS.contorno}`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: "7%",
+              borderRadius: "50%",
+              background: gradienteRadialBadge(CORES_BADGE[lenda.dominio]),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "7.79cqw",
+            }}
+          >
+            {INFO_FICHA[lenda.dominio].icone}
           </div>
-        )}
+        </div>
       </motion.div>
     </div>
   );

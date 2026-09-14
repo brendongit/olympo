@@ -72,12 +72,12 @@ export function TelaJogo({
       <div className="grid flex-1 grid-cols-[240px_1fr_260px] overflow-hidden">
         <aside className="flex flex-col gap-3 overflow-y-auto border-r border-stone-800 p-3">
           <PainelKeraunos estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
+          <Reservatorio key={estadoVisivel.numeroDoTurno} estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
           <PainelSantuarios estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
         </aside>
 
         <main className="flex flex-col overflow-hidden p-3">
           <FileirasLendas estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
-          <Reservatorio key={estadoVisivel.numeroDoTurno} estadoVisivel={estadoVisivel} jogadorFocoId={jogadorFocoId} />
         </main>
 
         <aside className="flex flex-col gap-3 overflow-y-auto border-l border-stone-800 p-3">

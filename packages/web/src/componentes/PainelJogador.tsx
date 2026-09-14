@@ -28,6 +28,7 @@ export function PainelJogador({
   const podeP = podePassar(estadoVisivel, jogador.id);
   const [cartaFocada, setCartaFocada] = useState<string | null>(null);
   const lendaFocada = cartaFocada ? LENDA_POR_ID[cartaFocada] : null;
+  const pressagioFocado = cartaFocada ? jogador.pressagios.find((p) => p.cartaId === cartaFocada) : undefined;
   const pilhasDeLendas = ORDEM_ESSENCIAS.map((essencia) => ({
     essencia,
     cartas: jogador.lendas.filter((id) => LENDA_POR_ID[id]?.dominio === essencia),
@@ -164,6 +165,7 @@ export function PainelJogador({
                 pagamento={pagamento}
                 reservaOculta={p.oculto}
                 jogadorTemChronos={jogador.temChronos}
+                aoClicarCard={() => setCartaFocada(cartaId)}
                 acoes={[
                   {
                     rotulo: 'Reivindicar',
@@ -199,7 +201,39 @@ export function PainelJogador({
         Passar
       </button>
 
-      {lendaFocada && <ModalFocoCarta lenda={lendaFocada} aoFechar={() => setCartaFocada(null)} />}
+      {lendaFocada && pressagioFocado && (
+        <ModalFocoCarta
+          lenda={lendaFocada}
+          jogador={jogador}
+          pagamento={calcularPagamento(jogador, lendaFocada)}
+          reservaOculta={pressagioFocado.oculto}
+          aoFechar={() => setCartaFocada(null)}
+          acoes={[
+            {
+              rotulo: 'Reivindicar',
+              destaque: true,
+              habilitado: podeReivindicar(estadoVisivel, jogador.id, lendaFocada.id, 'pressagio').ok,
+              motivo: (() => {
+                const r = podeReivindicar(estadoVisivel, jogador.id, lendaFocada.id, 'pressagio');
+                return r.ok ? undefined : r.motivo;
+              })(),
+              aoClicar: () => {
+                despachar({
+                  tipo: 'REIVINDICAR',
+                  jogadorId: jogador.id,
+                  cartaId: lendaFocada.id,
+                  origem: 'pressagio',
+                });
+                setCartaFocada(null);
+              },
+            },
+          ]}
+        />
+      )}
+
+      {lendaFocada && !pressagioFocado && (
+        <ModalFocoCarta lenda={lendaFocada} aoFechar={() => setCartaFocada(null)} />
+      )}
     </div>
   );
 }

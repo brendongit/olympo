@@ -21,6 +21,8 @@ export interface Lenda {
   /** Marca de Chronos: presente em todas as cartas de nível 3 e em nenhuma outra. */
   chronos: boolean;
   nome: string;
+  /** URL da arte de fundo da carta — puramente visual, opcional. Ausente ⇒ UI mostra um placeholder. */
+  arte?: string;
 }
 
 /** Uma das 12 faces de Santuário (6 cartões de dupla face). Ver Seção 10. */

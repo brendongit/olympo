@@ -1,13 +1,16 @@
 // Seção 17.4 item 6 / 17.6 — "Foco de carta": no mobile, tocar numa carta
 // (fileira ou presságio) abre este modal em vez de expor botões diretamente
-// no card apertado. O custo decomposto e a legalidade das ações continuam
-// vindo só do motor (calcularPagamento/podeReivindicar/podeReservar); este
-// componente apenas formata o texto.
+// no card apertado. Desde a migração pro layout TCG, o card em si (mesmo
+// componente da fileira) é exibido em destaque aqui, então o modal não
+// duplica nome/kléos/domínio/chronos em texto — só a decomposição de custo
+// (que não cabe no card) e os botões de ação. O custo decomposto e a
+// legalidade das ações continuam vindo só do motor
+// (calcularPagamento/podeReivindicar/podeReservar).
 
 import type { Bolsa, JogadorOuVisivel, Lenda } from '@olympos/motor';
 import { useFecharComEsc } from '../lib/useFecharComEsc.js';
 import { INFO_FICHA, ORDEM_ESSENCIAS } from '../lib/tema.js';
-import type { AcaoCarta } from './CartaLenda.js';
+import { CartaLenda, type AcaoCarta } from './CartaLenda.js';
 
 interface ModalFocoCartaProps {
   lenda: Lenda;
@@ -19,6 +22,8 @@ interface ModalFocoCartaProps {
   aoFechar: () => void;
 }
 
+const LARGURA_CARTA_DESTAQUE = 220;
+
 export function ModalFocoCarta({
   lenda,
   jogador,
@@ -29,7 +34,6 @@ export function ModalFocoCarta({
 }: ModalFocoCartaProps) {
   useFecharComEsc(aoFechar);
   const custosVisiveis = ORDEM_ESSENCIAS.filter((e) => lenda.custo[e] > 0);
-  const concedeChronos = lenda.chronos && !!jogador && !jogador.temChronos;
 
   return (
     <div
@@ -40,32 +44,16 @@ export function ModalFocoCarta({
         className="w-full max-w-sm rounded-xl border border-stone-700 bg-stone-900 p-4 shadow-2xl"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <div className="mb-1 flex items-center justify-between">
-          <span className="text-sm font-bold text-amber-300">{lenda.kleos > 0 ? `${lenda.kleos}★` : 'sem Kléos'}</span>
-          {lenda.argo > 0 && (
-            <span className="text-sm text-stone-300" title={`${lenda.argo} símbolo(s) do Argo`}>
-              {'⛵'.repeat(lenda.argo)}
-            </span>
-          )}
-          <span
-            className={`flex h-8 w-8 items-center justify-center rounded-full text-base ${INFO_FICHA[lenda.dominio].corFundo} ${INFO_FICHA[lenda.dominio].corTexto}`}
-            title={`Domínio: ${INFO_FICHA[lenda.dominio].rotulo}`}
-          >
-            {INFO_FICHA[lenda.dominio].icone}
-          </span>
+        <div className="mb-4 flex justify-center">
+          <CartaLenda
+            lenda={lenda}
+            pagamento={pagamento}
+            jogadorTemChronos={jogador?.temChronos}
+            reservaOculta={reservaOculta}
+            acoes={[]}
+            larguraPx={LARGURA_CARTA_DESTAQUE}
+          />
         </div>
-
-        {lenda.chronos && (
-          <p
-            className={`mb-2 text-right text-xs font-semibold ${concedeChronos ? 'text-amber-300' : 'text-stone-600'}`}
-          >
-            ⧗ {concedeChronos ? 'Concede a Essência de Chronos' : 'Marca de Chronos — você já tem a Essência'}
-          </p>
-        )}
-
-        <h2 className="mb-3 text-center font-serif text-2xl font-bold text-stone-100">
-          {reservaOculta ? '🂠 Presságio oculto' : lenda.nome}
-        </h2>
 
         {jogador && pagamento ? (
           <div className="mb-4 rounded-lg border border-stone-800 bg-stone-950/60 p-3">

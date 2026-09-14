@@ -82,7 +82,13 @@ export function Reservatorio({
         )}
       </div>
 
-      <div ref={containerRef} onKeyDown={aoTeclar} role="group" aria-label="Fichas do reservatório" className="flex flex-wrap gap-2">
+      <div
+        ref={containerRef}
+        onKeyDown={aoTeclar}
+        role="group"
+        aria-label="Fichas do reservatório"
+        className="flex flex-col gap-1.5"
+      >
         {ORDEM_FICHAS.map((f) => {
           const info = INFO_FICHA[f];
           const quantidade = estadoVisivel.reservatorio[f];
@@ -92,12 +98,12 @@ export function Reservatorio({
           // das essências por um divisor (Seção 19.3).
           if (f === 'icor' || f === 'chronos') {
             return (
-              <div key={f} className="flex items-center gap-2">
+              <div key={f} className="contents">
                 {f === 'icor' && (
-                  <span className="h-10 w-px bg-stone-700" aria-hidden="true" title="fora do mercado" />
+                  <span className="my-0.5 h-px w-full bg-stone-700" aria-hidden="true" title="fora do mercado" />
                 )}
                 <div
-                  className={`flex flex-col items-center rounded-lg border px-3 py-2 ${info.corBorda} ${info.corFundo} ${info.corTexto} opacity-80`}
+                  className={`flex items-center justify-between rounded-lg border px-2 py-1 ${info.corBorda} ${info.corFundo} ${info.corTexto} opacity-80`}
                   style={estiloAltoContraste(f, altoContraste)}
                   title={
                     f === 'icor'
@@ -105,7 +111,10 @@ export function Reservatorio({
                       : 'Chronos não pode ser colhido — só ao reivindicar a 1ª Lenda de nível 3'
                   }
                 >
-                  <span className="text-lg">{info.icone}</span>
+                  <span className="flex items-center gap-1 text-sm">
+                    <span>{info.icone}</span>
+                    {info.rotulo}
+                  </span>
                   <span
                     className={`text-sm font-bold transition-transform duration-300 motion-reduce:transition-none ${pulsando.has(f) ? 'scale-125 text-amber-300' : ''}`}
                   >
@@ -124,7 +133,7 @@ export function Reservatorio({
           const iguais = podeColherIguais(estadoVisivel, jogadorId, essencia);
 
           return (
-            <div key={f} className="flex flex-col items-center gap-1">
+            <div key={f} className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => alternar(essencia)}
@@ -137,7 +146,7 @@ export function Reservatorio({
                       ? `Colher 1 ${info.rotulo} (Ação A)`
                       : 'Seleção de 3 diferentes já completa'
                 }
-                className={`flex flex-col items-center rounded-lg border-2 px-3 py-2 transition ${info.corFundo} ${info.corTexto} ${
+                className={`flex flex-1 items-center justify-between rounded-lg border-2 px-2 py-1 transition ${info.corFundo} ${info.corTexto} ${
                   selecionada
                     ? 'border-white ring-2 ring-white'
                     : podeSelecionar
@@ -145,7 +154,10 @@ export function Reservatorio({
                       : 'border-transparent opacity-40'
                 }`}
               >
-                <span className="text-lg">{info.icone}</span>
+                <span className="flex items-center gap-1 text-sm">
+                  <span>{info.icone}</span>
+                  {info.rotulo}
+                </span>
                 <span
                   className={`text-sm font-bold transition-transform duration-300 motion-reduce:transition-none ${pulsando.has(f) ? 'scale-125 text-amber-300' : ''}`}
                 >
@@ -157,7 +169,7 @@ export function Reservatorio({
                 disabled={!iguais.ok}
                 title={iguais.ok ? `Colher 2 ${info.rotulo} (Ação B)` : iguais.motivo}
                 onClick={() => despachar({ tipo: 'COLHER_IGUAIS', jogadorId, essencia })}
-                className={`w-full rounded px-1 py-0.5 text-[10px] font-semibold ${
+                className={`shrink-0 rounded px-1.5 py-1 text-[10px] font-semibold ${
                   iguais.ok
                     ? 'bg-stone-700 text-stone-100 hover:bg-stone-600'
                     : 'cursor-not-allowed bg-stone-850 text-stone-600'
