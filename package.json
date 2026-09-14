@@ -7,7 +7,7 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test"
   },
-  "packageManager": "pnpm@12.3.4",
+  "packageManager": "pnpm@11.27.0",
   "engines": {
     "node": ">=18"
   }
